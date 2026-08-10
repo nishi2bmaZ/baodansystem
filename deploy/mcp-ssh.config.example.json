@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "baodan-tencent": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@fangjunjie/ssh-mcp-server",
+        "--host", "这里填服务器公网IP",
+        "--port", "22",
+        "--username", "你的登录用户名",
+        "--password", "你的登录密码"
+      ]
+    }
+  }
+}

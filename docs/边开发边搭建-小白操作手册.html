@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>边开发边搭建·小白操作手册</title>
+<style>
+:root{
+  --brand:#1a73e8; --brand-soft:#e8f0fe; --ink:#222; --muted:#666;
+  --line:#e3e7ee; --ok:#1e7e34; --warn:#b06000; --code-bg:#f6f8fa;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+  color:var(--ink);background:#f5f7fa;line-height:1.75;font-size:17px}
+.topbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);
+  padding:12px 22px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 6px rgba(0,0,0,.04)}
+.topbar h1{font-size:18px;margin:0;color:var(--brand)}
+.topbar .sp{flex:1}
+.btn{border:1px solid var(--brand);background:var(--brand);color:#fff;border-radius:8px;
+  padding:8px 16px;font-size:14px;cursor:pointer}
+.btn:hover{opacity:.9}
+.wrap{max-width:920px;margin:22px auto 80px;background:#fff;border:1px solid var(--line);
+  border-radius:14px;padding:36px 44px;box-shadow:0 4px 20px rgba(0,0,0,.05)}
+.toc{background:var(--brand-soft);border:1px solid #cfe0fb;border-radius:12px;
+  padding:16px 22px;margin:0 0 30px}
+.toc .toctitle{font-weight:700;color:var(--brand);margin-bottom:8px}
+.toc ul{margin:0;padding-left:22px}
+.toc a{color:#1558b0;text-decoration:none}
+.toc a:hover{text-decoration:underline}
+h1{font-size:27px;margin:0 0 6px;color:var(--brand)}
+h2{font-size:22px;margin:38px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--brand-soft);color:#0b3d91}
+h3{font-size:19px;margin:26px 0 10px;color:#14418f}
+p{margin:12px 0}
+blockquote{background:#fff8e6;border-left:4px solid #f9ab00;margin:16px 0;padding:12px 18px;
+  border-radius:0 8px 8px 0;color:#5b4700}
+code{background:var(--code-bg);border:1px solid #e6e9ef;border-radius:5px;padding:2px 6px;
+  font-family:"SFMono-Regular",Consolas,Menlo,monospace;font-size:14px}
+pre{background:#0d1117;border-radius:10px;padding:16px 18px;overflow:auto}
+pre code{background:none;border:none;color:#e6edf3;padding:0;font-size:14px}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:15px}
+th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+th{background:var(--brand-soft);color:#0b3d91;font-weight:700}
+tr:nth-child(even) td{background:#fafbfc}
+ul,ol{padding-left:24px}
+li{margin:6px 0}
+input[type=checkbox]{width:16px;height:16px;margin-right:8px;vertical-align:middle}
+strong{color:#0b3d91}
+svg{max-width:100%;height:auto;display:block;margin:18px auto}
+@media print{
+  body{background:#fff;font-size:13px}
+  .topbar{display:none}
+  .wrap{box-shadow:none;border:none;margin:0;max-width:100%;padding:0}
+  .toc{break-after:page}
+  h2{hbreak-after:avoid}
+  pre,table,svg{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>📘 边开发边搭建 · 小白操作手册</h1>
+  <span class="sp"></span>
+  <button class="btn" onclick="window.print()">打印 / 存为 PDF</button>
+</div>
+<div class="wrap">
+<div class="toc">
+<ul>
+<li><a href="#_1">报单系统·边开发边搭建 操作手册（小白版）</a><ul>
+<li><a href="#_2">一、先看这张图，搞懂"我们在连什么"</a></li>
+<li><a href="#_3">二、名词小词典（看不懂就回来查这一节）</a></li>
+<li><a href="#_4">三、开始前，先打勾确认你有以下东西</a></li>
+<li><a href="#_5">四、第一步：确认你能登录服务器（最重要，先做）</a><ul>
+<li><a href="#41">4.1 在网页里登录服务器（最省事，不用装软件）</a></li>
+<li><a href="#42-22-ssh">4.2 确认 22 端口（SSH）是开的</a></li>
+</ul>
+</li>
+<li><a href="#workbuddy">五、第二步：在 WorkBuddy 里配置"连接器"（核心动作）</a><ul>
+<li><a href="#51">5.1 找到（或新建）配置文件</a></li>
+<li><a href="#52">5.2 把下面这段配置粘进去</a></li>
+<li><a href="#53">5.3 ⚠️ 三个最容易出错的地方（务必对照检查）</a></li>
+</ul>
+</li>
+<li><a href="#_6">六、第三步：让连接器生效（必须点一下"信任"）</a></li>
+<li><a href="#_7">七、第四步：连通测试（这一步交给我）</a></li>
+<li><a href="#_8">八、安心说明：为什么不会搞坏你原来的程序？</a></li>
+<li><a href="#_9">九、常见报错 &amp; 怎么办（遇到对着查）</a></li>
+<li><a href="#_10">十、一键检查清单（照着打勾，做完就能交付给我）</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h1 id="_1">报单系统·边开发边搭建 操作手册（小白版）</h1>
+<blockquote>
+<p>适用对象：完全不懂代码、不懂服务器的新手。
+目标：照着做，就能让 WorkBuddy 安全地连上你的腾讯云服务器，实现"边写代码边部署"。
+预计耗时：20 分钟（一次性配置，之后就不用管了）。</p>
+</blockquote>
+<hr />
+<h2 id="_2">一、先看这张图，搞懂"我们在连什么"</h2>
+<p><svg viewBox="0 0 680 270" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Microsoft YaHei,sans-serif">
+  <rect x="18" y="90" width="150" height="90" rx="12" fill="#e8f0fe" stroke="#1a73e8" stroke-width="2"/>
+  <text x="93" y="122" text-anchor="middle" font-size="15" font-weight="700" fill="#1a73e8">你的电脑</text>
+  <text x="93" y="145" text-anchor="middle" font-size="13" fill="#333">WorkBuddy</text></p>
+<p><line x1="168" y1="135" x2="288" y2="135" stroke="#5f6368" stroke-width="2.5"/>
+  <polygon points="288,135 276,129 276,141" fill="#5f6368"/>
+  <rect x="176" y="100" width="100" height="22" rx="11" fill="#fff" stroke="#5f6368"/>
+  <text x="226" y="115" text-anchor="middle" font-size="11" fill="#5f6368">SSH 加密通道</text></p>
+<p><rect x="300" y="35" width="360" height="205" rx="14" fill="#fef7e0" stroke="#f9ab00" stroke-width="2"/>
+  <text x="480" y="65" text-anchor="middle" font-size="16" font-weight="700" fill="#b06000">腾讯云服务器</text></p>
+<p><rect x="322" y="90" width="150" height="120" rx="10" fill="#e6f4ea" stroke="#34a853" stroke-width="2"/>
+  <text x="397" y="130" text-anchor="middle" font-size="14" font-weight="700" fill="#1e7e34">报单系统</text>
+  <text x="397" y="152" text-anchor="middle" font-size="12" fill="#1e7e34">Docker 容器</text>
+  <text x="397" y="174" text-anchor="middle" font-size="11" fill="#666">（我们新建的）</text></p>
+<p><rect x="488" y="90" width="150" height="120" rx="10" fill="#eceff1" stroke="#9aa0a6" stroke-width="2"/>
+  <text x="563" y="130" text-anchor="middle" font-size="14" font-weight="700" fill="#5f6368">原有程序</text>
+  <text x="563" y="152" text-anchor="middle" font-size="12" fill="#5f6368">照常运行</text>
+  <text x="563" y="174" text-anchor="middle" font-size="11" fill="#666">（完全不动）</text></p>
+<p><text x="480" y="228" text-anchor="middle" font-size="12" fill="#b06000">↑ 两者互不干扰，独立的端口 / 独立的数据库 / 独立的网络</text>
+</svg></p>
+<p><strong>一句话解释：</strong>
+你的电脑上跑着 WorkBuddy，它通过一根"加密管道"（SSH）连到腾讯云服务器。在服务器里，我们新建的报单系统和你原来的程序分别住在各自的"集装箱"（Docker 容器）里，互不影响。</p>
+<hr />
+<h2 id="_3">二、名词小词典（看不懂就回来查这一节）</h2>
+<table>
+<thead>
+<tr>
+<th>词</th>
+<th>大白话解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>服务器 / 云主机</td>
+<td>一台放在腾讯云上的电脑，7×24 小时开机，跑你的程序</td>
+</tr>
+<tr>
+<td>公网 IP</td>
+<td>这台云电脑在 internet 上的"门牌号"，形如 <code>129.211.x.x</code></td>
+</tr>
+<tr>
+<td>SSH</td>
+<td>一种"安全地远程登录到服务器"的方式，像远程遥控操作那台电脑</td>
+</tr>
+<tr>
+<td>连接器 / MCP</td>
+<td>WorkBuddy 的一个"小插件"，装了它，WorkBuddy 就能用 SSH 连服务器</td>
+</tr>
+<tr>
+<td>端口</td>
+<td>服务器上不同程序的"门牌号"，比如 22 是 SSH 的门，8080 是我们报单系统的门</td>
+</tr>
+<tr>
+<td>Docker 容器</td>
+<td>把程序打包成"独立集装箱"，和别的程序隔离开，互不影响</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_4">三、开始前，先打勾确认你有以下东西</h2>
+<ul>
+<li>[ ] 一台能上网的 Windows 电脑（就是你装了 WorkBuddy 这台）</li>
+<li>[ ] 腾讯云服务器的<strong>公网 IP</strong>（在云控制台能看到，见第四步）</li>
+<li>[ ] 登录这台服务器的<strong>用户名</strong>和<strong>密码</strong>（你平时怎么登，就用什么）</li>
+<li>[ ] 服务器<strong>已经开了 22 端口</strong>（SSH，默认一般都开；不确定看第四步）</li>
+</ul>
+<blockquote>
+<p>如果你连"怎么登录服务器"都不知道，没关系，第四步会教你怎么在网页里登录，不用装任何软件。</p>
+</blockquote>
+<hr />
+<h2 id="_5">四、第一步：确认你能登录服务器（最重要，先做）</h2>
+<p>我们要先拿到三样信息：<strong>公网 IP、登录用户名、确认 22 端口开着</strong>。</p>
+<h3 id="41">4.1 在网页里登录服务器（最省事，不用装软件）</h3>
+<ol>
+<li>打开浏览器，登录 <a href="https://console.cloud.tencent.com/cvm">腾讯云控制台</a>。</li>
+<li>左侧点「云服务器」→「实例」，会看到你的服务器列表。</li>
+<li>在列表里找到你的服务器，看这两列：
+   - <strong>公网 IP</strong>：记下来（比如 <code>129.211.12.34</code>）← 这就是我们要的
+   - <strong>状态</strong>：必须是「运行中」</li>
+<li>点这一行最右边的「登录」按钮 → 选「标准登录（Linux 实例）」。</li>
+<li>输入你的<strong>用户名</strong>（一般是 <code>root</code> 或你自定义的名字）和<strong>密码</strong>，点登录。</li>
+<li>登录成功后，你会看到一个黑色窗口（命令行），光标在闪——这就代表你能控制这台服务器了。</li>
+</ol>
+<blockquote>
+<p>这一步只是为了"确认能登录 + 拿到 IP"。登录进去后不用敲任何命令，直接关掉窗口也行。</p>
+</blockquote>
+<h3 id="42-22-ssh">4.2 确认 22 端口（SSH）是开的</h3>
+<p>还是在控制台：
+1. 点你的服务器实例名称，进入详情页。
+2. 找「安全组」标签 → 点对应的安全组 →「入站规则」。
+3. 看有没有一条：<strong>协议端口 = <code>SSH(22)</code> 或 <code>TCP:22</code></strong>，来源 <code>0.0.0.0/0</code> 或你的 IP。
+4. 如果没有，点「添加规则」，协议选 <code>SSH</code>，端口 <code>22</code>，来源 <code>0.0.0.0/0</code>，保存。</p>
+<blockquote>
+<p>如果 22 是开的（绝大多数默认开），这步跳过。</p>
+</blockquote>
+<p><strong>现在你手上应该有：公网 IP、用户名、密码。</strong> 记在记事本里，下一步要用。</p>
+<hr />
+<h2 id="workbuddy">五、第二步：在 WorkBuddy 里配置"连接器"（核心动作）</h2>
+<p>这一步是让 WorkBuddy 能连上服务器。全程在你自己电脑上操作，不需要动服务器。</p>
+<h3 id="51">5.1 找到（或新建）配置文件</h3>
+<ol>
+<li>在你电脑上打开「文件资源管理器」。</li>
+<li>地址栏输入（直接复制粘贴）：
+   <code>C:\Users\1\.workbuddy\</code>
+   回车。</li>
+<li>在这个文件夹里找一个名为 <strong><code>mcp.json</code></strong> 的文件。
+   - <strong>如果有</strong>：右键 → 用「记事本」打开。
+   - <strong>如果没有</strong>：在空白处右键 → 新建 → 文本文档，改名为 <code>mcp.json</code>（注意：要改掉 <code>.txt</code> 后缀，如果看不到后缀，见下方小提示）。</li>
+</ol>
+<blockquote>
+<p><strong>小提示（看不到文件后缀怎么办）：</strong> 文件资源管理器顶部「查看」→ 勾选「文件扩展名」，就能看到并修改 <code>.txt</code> 了。</p>
+</blockquote>
+<h3 id="52">5.2 把下面这段配置粘进去</h3>
+<p>用记事本打开 <code>mcp.json</code> 后，<strong>把里面原来的内容全部删掉</strong>，复制粘贴下面这段：</p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;baodan-tencent&quot;: {
+      &quot;command&quot;: &quot;npx&quot;,
+      &quot;args&quot;: [
+        &quot;-y&quot;,
+        &quot;@fangjunjie/ssh-mcp-server&quot;,
+        &quot;--host&quot;, &quot;这里填服务器公网IP&quot;,
+        &quot;--port&quot;, &quot;22&quot;,
+        &quot;--username&quot;, &quot;你的登录用户名&quot;,
+        &quot;--password&quot;, &quot;你的登录密码&quot;
+      ]
+    }
+  }
+}
+</code></pre>
+<p>然后，把里面三处中文<strong>替换成你自己的真实信息</strong>（注意只改引号里面的内容，别删掉引号和逗号）：</p>
+<table>
+<thead>
+<tr>
+<th>位置</th>
+<th>改成什么</th>
+<th>举例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"这里填服务器公网IP"</code></td>
+<td>你的公网 IP</td>
+<td><code>"129.211.12.34"</code></td>
+</tr>
+<tr>
+<td><code>"你的登录用户名"</code></td>
+<td>你的登录用户名</td>
+<td><code>"root"</code></td>
+</tr>
+<tr>
+<td><code>"你的登录密码"</code></td>
+<td>你的登录密码</td>
+<td><code>"Abc123456"</code></td>
+</tr>
+</tbody>
+</table>
+<p>改完之后，文件大概长这样（举例）：</p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;baodan-tencent&quot;: {
+      &quot;command&quot;: &quot;npx&quot;,
+      &quot;args&quot;: [
+        &quot;-y&quot;,
+        &quot;@fangjunjie/ssh-mcp-server&quot;,
+        &quot;--host&quot;, &quot;129.211.12.34&quot;,
+        &quot;--port&quot;, &quot;22&quot;,
+        &quot;--username&quot;, &quot;root&quot;,
+        &quot;--password&quot;, &quot;Abc123456&quot;
+      ]
+    }
+  }
+}
+</code></pre>
+<h3 id="53">5.3 ⚠️ 三个最容易出错的地方（务必对照检查）</h3>
+<ol>
+<li><strong>每个参数和值必须分开写，不能连在一起。</strong>
+   ✅ 正确：<code>"--host", "129.211.12.34"</code>
+   ❌ 错误：<code>"--host 129.211.12.34"</code>（少了一个逗号分隔，会连不上）</li>
+<li><strong>引号、逗号一个都不能少。</strong> 最后一个 <code>]</code> 和 <code>}</code> 后面没有逗号。</li>
+<li><strong>密码只写在你自己电脑的这个文件里</strong>，不要发到我们的聊天里，也不要发给我。</li>
+</ol>
+<p>改好后，按 <code>Ctrl+S</code> 保存，关闭记事本。</p>
+<blockquote>
+<p><strong>更安全的做法（可选，不强制）：</strong> 如果你担心密码写在文件里，可以改用"密钥登录"，不写密码。但那需要额外生成密钥对并上传，步骤更多。新手先用上面的"密码方式"即可，密码只存在你本地电脑，不会泄露给别人。</p>
+</blockquote>
+<hr />
+<h2 id="_6">六、第三步：让连接器生效（必须点一下"信任"）</h2>
+<p>光写文件还不够，WorkBuddy 出于安全，需要你手动"信任"这个连接器才会启用。</p>
+<ol>
+<li>打开 WorkBuddy 软件。</li>
+<li>看左侧边栏，找「连接器」（或叫 Connectors / 自定义连接器）入口，点进去。</li>
+<li>在列表里找到刚加的 <strong><code>baodan-tencent</code></strong>（或显示 <code>@fangjunjie/ssh-mcp-server</code>）。</li>
+<li>它旁边应该有个「信任」按钮，<strong>点一下信任</strong>。</li>
+<li>如果列表里没看到它：完全关闭 WorkBuddy 再重新打开，让它重新读取配置文件。</li>
+<li>信任后，可能需要等几秒，状态变成「已连接 / connected」就成功了。</li>
+</ol>
+<blockquote>
+<p>如果提示"找不到 npx"或启动失败：大概率是没装 Node.js。告诉我，我给你最简安装步骤（装一次就好）。</p>
+</blockquote>
+<hr />
+<h2 id="_7">七、第四步：连通测试（这一步交给我）</h2>
+<p>连接器信任成功后，<strong>你什么都不用做了</strong>，把下面三样信息发给我（依然是只发给我看，别发密码到公开聊天）：</p>
+<ul>
+<li>服务器公网 IP：<strong><em>_</em></strong>_</li>
+<li>登录用户名：<strong><em>_</em></strong>_</li>
+<li>登录密码：<strong><em>_</em></strong>_</li>
+</ul>
+<blockquote>
+<p>如果你按第五步已经把密码写进 <code>mcp.json</code> 了，那连 IP 和密码都不用发，直接跟我说一句"<strong>测试连接</strong>"就行，我直接读配置文件去连。</p>
+</blockquote>
+<p>我会先跑两个无害的测试命令确认通道通了：
+- <code>ls /opt</code>（看看服务器目录）
+- <code>docker --version</code>（看看有没有装 Docker）</p>
+<p><strong>只有测试通过后，我们才会正式开始部署。</strong> 不会一上来就动你的服务器。</p>
+<hr />
+<h2 id="_8">八、安心说明：为什么不会搞坏你原来的程序？</h2>
+<p>这是你最担心的点，我直接说清楚三道保险：</p>
+<ol>
+<li><strong>独立的"门牌号"</strong>：报单系统跑在 <code>8080</code> 端口，数据库用 <code>5433</code>，Redis 用 <code>6380</code>，都避开了常见的 80/443/3306/5432/6379。和你原来程序用的端口不冲突。</li>
+<li><strong>独立的"集装箱"</strong>：整套系统用 Docker 容器运行，有自己独立的数据库和网络，不碰你服务器上原有的任何程序。</li>
+<li><strong>危险命令被挡住</strong>：连接器设了"黑名单"，像 <code>rm -rf</code>、<code>shutdown</code>、<code>reboot</code>、<code>docker system prune</code> 这类会搞破坏的命令，就算误发也会被拦下。</li>
+<li><strong>任何"删除 / 重启"动作，我都会先问你一句</strong>，你同意我才做。</li>
+</ol>
+<p>如果你哪天不想要了，一条命令 <code>docker compose down</code> 就能把整个报单系统停下并移除，你原来的程序原封不动。</p>
+<hr />
+<h2 id="_9">九、常见报错 &amp; 怎么办（遇到对着查）</h2>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>可能原因</th>
+<th>怎么办</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>连接器启动报错"npx 不是内部命令"</td>
+<td>没装 Node.js</td>
+<td>告诉我，我给你一键安装步骤</td>
+</tr>
+<tr>
+<td>连不上，提示 <code>Permission denied (publickey)</code></td>
+<td>用了密钥方式但公钥没放对</td>
+<td>改用"密码方式"（第五步 5.2），或告诉我重做密钥</td>
+</tr>
+<tr>
+<td>提示 <code>Connection refused</code> / <code>timeout</code></td>
+<td>IP 错、端口不对、或 22 端口没开</td>
+<td>回第四步核对 IP 和安全组</td>
+</tr>
+<tr>
+<td>命令被执行但提示"被黑名单拦截"</td>
+<td>碰到了危险命令</td>
+<td>正常保护，告诉我想做什么，我换安全方式</td>
+</tr>
+<tr>
+<td>列表里看不到 <code>baodan-tencent</code></td>
+<td>配置文件没保存 / 路径错</td>
+<td>确认文件在 <code>C:\Users\1\.workbuddy\mcp.json</code>，关掉 WorkBuddy 重开</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_10">十、一键检查清单（照着打勾，做完就能交付给我）</h2>
+<ul>
+<li>[ ] 拿到服务器<strong>公网 IP</strong>（第四步）</li>
+<li>[ ] 确认能登录服务器（第四步 4.1）</li>
+<li>[ ] 确认 22 端口开着（第四步 4.2）</li>
+<li>[ ] 找到 / 新建了 <code>C:\Users\1\.workbuddy\mcp.json</code>（第五步 5.1）</li>
+<li>[ ] 把配置粘进去，并替换了 IP / 用户名 / 密码（第五步 5.2）</li>
+<li>[ ] 检查了"参数分开写、引号逗号完整"（第五步 5.3）</li>
+<li>[ ] 在 WorkBuddy 里<strong>信任</strong>了 <code>baodan-tencent</code>（第六步）</li>
+<li>[ ] 跟我说"测试连接"（或发来 IP / 用户名 / 密码）（第七步）</li>
+<li>[ ] 等我说"测试通过"，再正式开工</li>
+</ul>
+<hr />
+<p><strong>做完上面全部打勾，你就完成了所有配置。</strong> 接下来开发、部署、上线，都由我来操作，你只需要在关键节点（比如"要不要正式发布"）点个头就行。</p>
+<p>有任何一步卡住，把报错截图发我，我帮你看着办。</p>
+</div>
+</body>
+</html>

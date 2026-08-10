@@ -1,0 +1,140 @@
+// 团队任务报单系统 数据模型（Prisma + PostgreSQL）
+// 已对齐需求确认纪要 V1.1：
+//  - 邮箱/手机号 一对一唯一（Q1）
+//  - 邀请码绑定上级 + 人工审核（Q2/Q4）
+//  - 单会员每日名额可配，默认1（Q5）
+//  - 提交截止默认 18:00（Q6）
+//  - 驳回可重提 + 通知（Q7）
+//  - 不做结算，仅统计任务次数（Q9）
+//  - 关系调整按新关系重算（Q15）
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  PENDING  // 待人工审核
+  ACTIVE   // 已通过
+  DISABLED // 已禁用
+}
+
+enum SubmissionStatus {
+  GRABBED   // 已抢单未提交
+  SUBMITTED // 已提交待审核
+  APPROVED  // 通过
+  REJECTED  // 驳回
+}
+
+enum TaskStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  email        String     @unique // 星际未来邮箱，唯一
+  phone        String     @unique // 商城手机号，唯一（一对一绑定）
+  passwordHash String
+  status       UserStatus @default(PENDING)
+  inviteCode   String?   // 注册所用邀请码
+  referrerId   Int?
+  referrer     User?      @relation("Referral", fields: [referrerId], references: [id])
+  referrals    User[]     @relation("Referral")
+  path         String     @default("") // 物化路径，如 /1/5/9/
+  depth        Int        @default(0)
+  reviewedById Int?
+  reviewedAt   DateTime?
+  createdAt    DateTime   @default(now())
+
+  submissions  Submission[]
+  createdCodes InviteCode[] @relation("Owner")
+}
+
+model InviteCode {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  ownerId   Int
+  owner     User     @relation("Owner", fields: [ownerId], references: [id])
+  usedById  Int?
+  status    String   @default("UNUSED") // UNUSED / USED
+  createdAt DateTime @default(now())
+}
+
+model TaskTemplate {
+  id           Int        @id @default(autoincrement())
+  name         String
+  schemaJson   String     // 动态表单 Schema（JSON 文本）
+  version      Int        @default(1)
+  perUserDaily Int        @default(1)   // 单会员每日名额（Q5，默认1）
+  submitDeadline String   @default("18:00") // 提交截止时间（Q6，默认18:00）
+  dailyQuota   Int        // 每日总名额
+  startTime    String     // 每日开始时间，如 09:00
+  endTime      String     // 每日结束时间
+  status       TaskStatus  @default(DRAFT)
+  createdById  Int
+  instances    TaskInstance[]
+}
+
+model TaskInstance {
+  id        Int         @id @default(autoincrement())
+  templateId Int
+  template  TaskTemplate @relation(fields: [templateId], references: [id])
+  date      DateTime    @db.Date
+  quota     Int
+  grabbed   Int         @default(0)
+  startTime DateTime
+  endTime   DateTime
+  status    String      @default("OPEN")
+  submissions Submission[]
+
+  @@unique([templateId, date])
+}
+
+model Submission {
+  id             Int             @id @default(autoincrement())
+  instanceId     Int
+  instance       TaskInstance    @relation(fields: [instanceId], references: [id])
+  userId         Int
+  user           User            @relation(fields: [userId], references: [id])
+  data           String          // 提交数据 JSON
+  images         String?         // 图片 URL 列表 JSON
+  status         SubmissionStatus @default(GRABBED)
+  submitDeadline DateTime?       // 计算出的当日 18:00
+  submittedAt    DateTime?
+  reviewedById   Int?
+  reviewedAt     DateTime?
+  rejectReason   String?
+  notifiedAt     DateTime?       // 驳回/结果通知发送时间（Q7）
+  taskCount      Int?            // 统计用：本次计入的任务次数（Q9）
+  createdAt      DateTime        @default(now())
+
+  @@unique([instanceId, userId]) // 同一场次同一人仅一条（配合抢单原子性）
+}
+
+model RelationAdjustLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  oldReferrer Int?
+  newReferrer Int?
+  oldPath    String?
+  newPath    String?
+  operatorId Int
+  reason     String?
+  createdAt  DateTime @default(now())
+}
+
+model ExportRecord {
+  id         Int      @id @default(autoincrement())
+  taskId     Int
+  date       DateTime @db.Date
+  filePath   String
+  rowCount   Int
+  createdById Int
+  createdAt  DateTime @default(now())
+}

@@ -1,0 +1,53 @@
+# 团队任务报单系统 - 开发/部署编排
+# 设计原则：与服务器上现有程序完全隔离（独立端口、独立网络、独立数据卷）
+# 部署：在腾讯云服务器上执行  docker compose up -d
+# 回滚：docker compose down
+
+services:
+  app:
+    build: .
+    # 宿主机 8090 -> 容器 3000。注意：8080 已被服务器原有 node 程序占用，故改 8090
+    ports:
+      - "8090:3000"
+    environment:
+      DATABASE_URL: postgresql://baodan:baodan@db:5432/baodan
+      REDIS_URL: redis://redis:6379
+      APP_PORT: "3000"
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-prod}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - baodan_net
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    # 宿主机 5433 -> 容器 5432，避开现有 5432
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: baodan
+      POSTGRES_PASSWORD: baodan
+      POSTGRES_DB: baodan
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - baodan_net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # 宿主机 6380 -> 容器 6379，避开现有 6379
+    ports:
+      - "6380:6379"
+    networks:
+      - baodan_net
+    restart: unless-stopped
+
+networks:
+  baodan_net:
+    driver: bridge
+
+volumes:
+  pgdata:

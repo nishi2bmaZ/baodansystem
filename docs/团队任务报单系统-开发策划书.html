@@ -1,0 +1,4937 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>团队任务报单系统 · 开发策划书</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1f2329; --ink-2:#4e5969; --ink-3:#86909c;
+  --line:#e5e6eb; --line-2:#f0f1f3; --brand:#2f5cff; --brand-soft:#eef2ff;
+  --code-bg:#f7f8fa; --warn:#ff7d00; --danger:#f53f3f; --ok:#00b42a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px; line-height:1.75; -webkit-font-smoothing:antialiased;
+}
+.layout{display:flex; max-width:1440px; margin:0 auto; gap:28px; padding:28px 24px 80px}
+/* 侧边目录 */
+.sidebar{
+  width:280px; flex:0 0 280px; position:sticky; top:28px; align-self:flex-start;
+  max-height:calc(100vh - 56px); overflow-y:auto; background:var(--panel);
+  border:1px solid var(--line); border-radius:12px; padding:18px 8px 18px 16px;
+}
+.sidebar::-webkit-scrollbar{width:6px}
+.sidebar::-webkit-scrollbar-thumb{background:#d8dbe0; border-radius:3px}
+.sidebar h3{margin:0 0 12px; font-size:13px; letter-spacing:.08em; color:var(--ink-3); font-weight:600}
+.sidebar ul{list-style:none; margin:0; padding:0}
+.sidebar li{margin:0}
+.sidebar a{
+  display:block; padding:5px 10px; border-radius:6px; color:var(--ink-2);
+  text-decoration:none; font-size:13px; line-height:1.5;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sidebar a:hover{background:var(--brand-soft); color:var(--brand)}
+.sidebar a.active{background:var(--brand-soft); color:var(--brand); font-weight:600}
+.sidebar > .toc > ul > li > ul{margin-left:10px; border-left:1px solid var(--line-2); padding-left:4px}
+.sidebar > .toc > ul > li > ul a{font-size:12.5px; color:var(--ink-3)}
+/* 正文 */
+.content{
+  flex:1; min-width:0; background:var(--panel); border:1px solid var(--line);
+  border-radius:12px; padding:44px 52px 64px;
+}
+.content h1{
+  font-size:30px; line-height:1.35; margin:0 0 28px; padding-bottom:20px;
+  border-bottom:3px solid var(--brand); font-weight:700; letter-spacing:-.01em;
+}
+.content h2{
+  font-size:22px; margin:52px 0 18px; padding-left:14px; font-weight:700;
+  border-left:5px solid var(--brand); line-height:1.4; scroll-margin-top:20px;
+}
+.content h3{font-size:17px; margin:34px 0 12px; font-weight:650; color:#252a31; scroll-margin-top:20px}
+.content h4{font-size:15px; margin:24px 0 10px; font-weight:650; color:var(--ink-2)}
+.content p{margin:12px 0}
+.content ul,.content ol{padding-left:26px; margin:12px 0}
+.content li{margin:5px 0}
+.content strong{font-weight:650; color:#111}
+.content hr{border:0; border-top:1px dashed var(--line); margin:44px 0}
+.content a{color:var(--brand); text-decoration:none}
+.content a:hover{text-decoration:underline}
+/* 表格 */
+.tablewrap{overflow-x:auto; margin:18px 0; border:1px solid var(--line); border-radius:10px}
+table{border-collapse:collapse; width:100%; font-size:13.5px; background:#fff}
+th,td{border-bottom:1px solid var(--line-2); padding:10px 14px; text-align:left; vertical-align:top}
+th{background:#fafbfc; font-weight:650; color:var(--ink-2); white-space:nowrap; position:sticky; top:0}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#fafbff}
+td:first-child{white-space:nowrap}
+/* 代码 */
+pre{
+  background:var(--code-bg); border:1px solid var(--line); border-radius:10px;
+  padding:16px 18px; overflow-x:auto; margin:16px 0; line-height:1.6;
+}
+pre code{
+  font-family:"JetBrains Mono","SF Mono",Consolas,"Courier New",monospace;
+  font-size:12.5px; color:#2d3748; white-space:pre; background:none; padding:0; border:0;
+}
+:not(pre) > code{
+  background:#f2f3f5; border:1px solid var(--line); border-radius:4px;
+  padding:1px 6px; font-size:12.5px; color:#c7254e;
+  font-family:"JetBrains Mono","SF Mono",Consolas,monospace;
+}
+/* 引用 */
+blockquote{
+  margin:18px 0; padding:12px 18px; background:#fffbf0;
+  border-left:4px solid var(--warn); border-radius:0 8px 8px 0; color:#6b5720;
+}
+blockquote p{margin:4px 0}
+/* 顶部工具条 */
+.topbar{
+  position:fixed; right:24px; bottom:24px; display:flex; flex-direction:column; gap:10px; z-index:99;
+}
+.topbar button{
+  width:44px; height:44px; border-radius:50%; border:1px solid var(--line);
+  background:#fff; color:var(--ink-2); cursor:pointer; font-size:15px;
+  box-shadow:0 4px 14px rgba(0,0,0,.08); transition:.18s;
+}
+.topbar button:hover{color:var(--brand); border-color:var(--brand); transform:translateY(-2px)}
+@media print{
+  body{background:#fff}
+  .sidebar,.topbar{display:none}
+  .layout{padding:0; max-width:none}
+  .content{border:0; border-radius:0; padding:0}
+  .content h2{page-break-after:avoid}
+  table,pre{page-break-inside:avoid}
+}
+@media (max-width:1080px){
+  .layout{flex-direction:column; padding:16px}
+  .sidebar{width:100%; flex:none; position:static; max-height:300px}
+  .content{padding:28px 20px}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h3>目录导航</h3>
+    <div class="toc">
+<ul>
+<li><a href="#_2">一、项目概述</a><ul>
+<li><a href="#11">1.1 项目背景</a></li>
+<li><a href="#12">1.2 业务现状与核心痛点</a></li>
+<li><a href="#13">1.3 项目目标</a></li>
+<li><a href="#14">1.4 名词定义</a></li>
+<li><a href="#15">1.5 项目范围</a></li>
+<li><a href="#16">1.6 关键设计假设</a></li>
+</ul>
+</li>
+<li><a href="#_3">二、角色与权限</a><ul>
+<li><a href="#21">2.1 角色定义</a></li>
+<li><a href="#22">2.2 权限矩阵</a></li>
+</ul>
+</li>
+<li><a href="#_4">三、核心业务流程</a><ul>
+<li><a href="#31">3.1 系统整体流程</a></li>
+<li><a href="#32">3.2 注册与账号绑定流程</a></li>
+<li><a href="#33">3.3 抢单—做单—提交—审核 主流程</a></li>
+<li><a href="#34">3.4 名额与超时释放机制</a></li>
+<li><a href="#35">3.5 推荐关系建立与调整流程</a></li>
+<li><a href="#36">3.6 对账与导出流程</a></li>
+</ul>
+</li>
+<li><a href="#_5">四、功能需求详述</a><ul>
+<li><a href="#41-h5">4.1 会员端（H5）</a></li>
+<li><a href="#42">4.2 管理后台</a></li>
+</ul>
+</li>
+<li><a href="#_6">五、动态表单引擎设计</a><ul>
+<li><a href="#51">5.1 设计目标</a></li>
+<li><a href="#52">5.2 字段类型清单</a></li>
+<li><a href="#53-schema">5.3 Schema 结构示例</a></li>
+<li><a href="#54">5.4 关键设计决策</a></li>
+</ul>
+</li>
+<li><a href="#_7">六、名额与并发控制设计</a><ul>
+<li><a href="#61">6.1 问题描述</a></li>
+<li><a href="#62-redis">6.2 技术方案：Redis 原子扣减 + 数据库唯一索引双保险</a></li>
+<li><a href="#63">6.3 报单状态机</a></li>
+<li><a href="#64">6.4 超时释放实现</a></li>
+</ul>
+</li>
+<li><a href="#_8">七、推荐关系设计</a><ul>
+<li><a href="#71">7.1 数据模型选型</a></li>
+<li><a href="#72">7.2 环路检测</a></li>
+<li><a href="#73">7.3 关系变更的影响评估</a></li>
+</ul>
+</li>
+<li><a href="#_9">八、数据库设计</a><ul>
+<li><a href="#81-er">8.1 ER 关系概览</a></li>
+<li><a href="#82-postgresql">8.2 核心表结构（PostgreSQL）</a></li>
+<li><a href="#83">8.3 索引与性能要点</a></li>
+</ul>
+</li>
+<li><a href="#_10">九、接口设计</a><ul>
+<li><a href="#91">9.1 通用规范</a></li>
+<li><a href="#92">9.2 会员端接口清单</a></li>
+<li><a href="#93">9.3 关键接口示例</a></li>
+<li><a href="#94">9.4 后台接口清单（摘要）</a></li>
+</ul>
+</li>
+<li><a href="#_11">十、技术架构与选型</a><ul>
+<li><a href="#101">10.1 技术选型</a></li>
+<li><a href="#102">10.2 系统架构图</a></li>
+<li><a href="#103">10.3 部署方案</a></li>
+<li><a href="#104">10.4 文件上传方案</a></li>
+<li><a href="#105">10.5 安全设计</a></li>
+</ul>
+</li>
+<li><a href="#_12">十一、非功能性需求</a></li>
+<li><a href="#_13">十二、风控与防作弊</a><ul>
+<li><a href="#121">12.1 风险场景与对策</a></li>
+<li><a href="#122">12.2 图片查重算法</a></li>
+<li><a href="#123">12.3 业务合规提示</a></li>
+</ul>
+</li>
+<li><a href="#uiux">十三、UI/UX 设计要求</a><ul>
+<li><a href="#131">13.1 页面清单</a></li>
+<li><a href="#132">13.2 交互设计要点</a></li>
+<li><a href="#133">13.3 视觉规范</a></li>
+</ul>
+</li>
+<li><a href="#_14">十四、项目排期与里程碑</a><ul>
+<li><a href="#141-10">14.1 迭代规划（总周期 10 周）</a></li>
+<li><a href="#142">14.2 里程碑</a></li>
+<li><a href="#143">14.3 人力配置</a></li>
+<li><a href="#144">14.4 交付物清单</a></li>
+</ul>
+</li>
+<li><a href="#_15">十五、测试与验收</a><ul>
+<li><a href="#151">15.1 测试策略</a></li>
+<li><a href="#152">15.2 关键测试用例</a></li>
+<li><a href="#153-dod">15.3 验收标准（DoD）</a></li>
+</ul>
+</li>
+<li><a href="#_16">十六、风险识别与应对</a></li>
+<li><a href="#_17">十七、后续演进规划</a><ul>
+<li><a href="#1-3">二期（上线后 1-3 个月）</a></li>
+<li><a href="#3-6">三期（上线后 3-6 个月）</a></li>
+</ul>
+</li>
+<li><a href="#_18">十八、附录</a><ul>
+<li><a href="#a">附录 A：状态码与枚举字典</a></li>
+<li><a href="#b">附录 B：导出字段对照表</a></li>
+<li><a href="#c">附录 C：待确认问题清单</a></li>
+<li><a href="#c-1v112026-08-10">附录 C-1：需求确认纪要（V1.1，2026-08-10）</a></li>
+</ul>
+</li>
+<li><a href="#_19">文档修订记录</a></li>
+</ul>
+</div>
+
+  </aside>
+  <main class="content">
+    <h1 id="_1">团队任务报单系统 · 开发策划书</h1>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>项目名称</td>
+<td>团队任务报单系统（Task Report System，代号 TRS）</td>
+</tr>
+<tr>
+<td>文档版本</td>
+<td>V1.0</td>
+</tr>
+<tr>
+<td>编制日期</td>
+<td>2026-08-10</td>
+</tr>
+<tr>
+<td>文档状态</td>
+<td>待评审</td>
+</tr>
+<tr>
+<td>适用对象</td>
+<td>产品、研发、测试、运营、审核团队</td>
+</tr>
+<tr>
+<td>关联系统</td>
+<td>星际未来平台（自有）、外部商城平台（第三方）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_2">一、项目概述</h2>
+<h3 id="11">1.1 项目背景</h3>
+<p>公司自有的<strong>星际未来平台</strong>已沉淀了一批会员，并具备完整的<strong>推荐关系树</strong>（以邮箱账号为唯一标识）。这些会员需要前往一个<strong>外部商城平台</strong>完成日常任务。</p>
+<p>问题在于：外部商城以<strong>手机号</strong>作为账号标识，且不承载任何推荐关系。这导致两侧数据完全割裂——商城只知道"谁做了任务"，却不知道"这个人属于哪条推荐线"；星际未来知道推荐关系，却拿不到商城侧的任务完成数据。</p>
+<p>因此需要建设一套<strong>中间层报单系统</strong>，把两个平台的身份打通，承载任务分发、任务提交、人工审核与对账导出的完整闭环。</p>
+<h3 id="12">1.2 业务现状与核心痛点</h3>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>痛点</th>
+<th>现状描述</th>
+<th>造成的影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P1</td>
+<td>身份割裂</td>
+<td>星际未来用邮箱，商城用手机号，无映射关系</td>
+<td>无法归因，业绩统计断层</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>推荐关系缺失</td>
+<td>商城侧完全没有推荐关系概念</td>
+<td>团队业绩无法核算，激励机制无法落地</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>任务分发靠人工</td>
+<td>任务通过群通知，先到先做，容易超量</td>
+<td>名额失控，超出预算</td>
+</tr>
+<tr>
+<td>P4</td>
+<td>提交材料混乱</td>
+<td>截图发在群里或私聊，散落各处</td>
+<td>审核效率低，材料易丢失</td>
+</tr>
+<tr>
+<td>P5</td>
+<td>审核无系统</td>
+<td>人工肉眼比对，无留痕、无统计</td>
+<td>审核标准不统一，纠纷难追溯</td>
+</tr>
+<tr>
+<td>P6</td>
+<td>对账困难</td>
+<td>与商城核对需手工整理表格</td>
+<td>耗时长，易出错</td>
+</tr>
+<tr>
+<td>P7</td>
+<td>防重复能力弱</td>
+<td>同一截图可能被重复提交</td>
+<td>存在结算风险</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13">1.3 项目目标</h3>
+<p><strong>业务目标</strong></p>
+<ul>
+<li>建立星际未来邮箱 ↔ 商城手机号的<strong>一对一可信映射</strong></li>
+<li>通过人工干预方式，在报单系统内<strong>重建完整推荐关系树</strong>，并可参照星际未来后台随时校正</li>
+<li>任务全流程线上化：<strong>发布 → 抢名额 → 做任务 → 提交材料 → 审核 → 导出对账</strong></li>
+<li>审核结果一键导出，与商城对账时间从"数小时"压缩到"分钟级"</li>
+</ul>
+<p><strong>技术目标</strong></p>
+<ul>
+<li>任务表单<strong>完全后台可配置</strong>，新增任务类型无需发版</li>
+<li>名额抢占在高并发下<strong>零超发</strong></li>
+<li>系统支撑 <strong>5000+ 注册会员、单场次 2000 人同时抢单</strong></li>
+<li>图片材料统一存储，支持跨用户、跨日期的<strong>自动查重</strong></li>
+</ul>
+<p><strong>量化指标（上线三个月内验收）</strong></p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>目标值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>抢单接口 P99 响应时间</td>
+<td>≤ 300ms</td>
+</tr>
+<tr>
+<td>名额超发率</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>审核单条平均耗时</td>
+<td>≤ 15 秒</td>
+</tr>
+<tr>
+<td>对账导出耗时（万级数据）</td>
+<td>≤ 30 秒</td>
+</tr>
+<tr>
+<td>系统可用性</td>
+<td>≥ 99.5%</td>
+</tr>
+<tr>
+<td>重复截图检出率</td>
+<td>≥ 95%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="14">1.4 名词定义</h3>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>英文/字段</th>
+<th>定义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>星际未来账号</td>
+<td>galaxy_email</td>
+<td>会员在星际未来平台的邮箱账号，系统内<strong>唯一</strong>，是推荐关系的锚点</td>
+</tr>
+<tr>
+<td>商城手机号</td>
+<td>mall_phone</td>
+<td>会员在外部商城的注册手机号，系统内<strong>唯一</strong>，是对账的关键字段</td>
+</tr>
+<tr>
+<td>任务模板</td>
+<td>Task Template</td>
+<td>后台配置的任务定义，包含名称、说明、表单结构、审核规则</td>
+</tr>
+<tr>
+<td>任务场次</td>
+<td>Task Instance</td>
+<td>任务模板在某一天的具体实例，携带开始/截止时间与名额数</td>
+</tr>
+<tr>
+<td>名额</td>
+<td>Quota / Slot</td>
+<td>任务场次可被抢占的份额总数</td>
+</tr>
+<tr>
+<td>报单</td>
+<td>Report / Submission</td>
+<td>会员抢占名额后提交的一条任务记录</td>
+</tr>
+<tr>
+<td>抢单</td>
+<td>Claim</td>
+<td>会员占用一个名额的动作，成功后进入待提交状态</td>
+</tr>
+<tr>
+<td>占位有效期</td>
+<td>Hold Duration</td>
+<td>抢单成功后必须完成提交的时限，超时名额自动回收</td>
+</tr>
+<tr>
+<td>推荐关系</td>
+<td>Referral</td>
+<td>会员之间的上下级关系，形成树状结构</td>
+</tr>
+<tr>
+<td>直推</td>
+<td>Direct Referral</td>
+<td>直接下级</td>
+</tr>
+<tr>
+<td>团队</td>
+<td>Team</td>
+<td>某会员名下所有层级的下级集合</td>
+</tr>
+</tbody>
+</table>
+<h3 id="15">1.5 项目范围</h3>
+<p><strong>本期包含（In Scope）</strong></p>
+<ul>
+<li>会员端 H5：注册、登录、任务大厅、抢单、提交、进度查询、我的团队</li>
+<li>管理后台：会员管理、推荐关系管理、任务模板配置、场次发布、审核工作台、导出、风控、系统设置</li>
+<li>动态表单引擎（可视化配置 + 前端动态渲染）</li>
+<li>名额抢占与并发控制</li>
+<li>图片上传、存储、压缩、查重</li>
+<li>Excel 导出与对账模板</li>
+<li>操作日志与审计</li>
+</ul>
+<p><strong>本期不包含（Out of Scope）</strong></p>
+<ul>
+<li>与星际未来平台的<strong>实时接口对接</strong>（本期采用 Excel 导入 + 人工调整；接口对接列入二期）</li>
+<li>与商城平台的<strong>API 自动对账</strong>（本期为导出文件人工核对；商城若开放接口列入二期）</li>
+<li>佣金结算、提现、资金流转（列入二期，本期仅做数据沉淀）</li>
+<li>App 原生客户端（本期为 H5，可套壳）</li>
+<li>多语言、多币种</li>
+</ul>
+<h3 id="16">1.6 关键设计假设</h3>
+<blockquote>
+<p>以下假设需业务方确认，如有出入将影响方案设计。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>假设</th>
+<th>影响面</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td>一个星际未来邮箱只能绑定一个商城手机号，反之亦然</td>
+<td>注册校验逻辑、防作弊</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>星际未来的推荐关系可导出为 Excel（含邮箱、上级邮箱）</td>
+<td>推荐关系初始化方式</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>任务以"天"为周期发布，同一任务每天一场</td>
+<td>场次生成策略</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>单个会员每天在同一任务下可抢多个名额（上限后台配置）</td>
+<td>名额模型设计</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>审核为人工单审，无需多级会签</td>
+<td>审核工作流复杂度</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>商城订单号可作为唯一去重依据</td>
+<td>防重复报单逻辑</td>
+</tr>
+<tr>
+<td>A7</td>
+<td>峰值并发不超过 2000 人同时抢单</td>
+<td>架构容量规划</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_3">二、角色与权限</h2>
+<h3 id="21">2.1 角色定义</h3>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>使用端</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>普通会员</td>
+<td>H5 会员端</td>
+<td>注册、抢单、做任务、提交材料、查看进度与团队</td>
+</tr>
+<tr>
+<td>团队长</td>
+<td>H5 会员端</td>
+<td>会员权限 + 查看本团队报单汇总与业绩（只读）</td>
+</tr>
+<tr>
+<td>审核员</td>
+<td>管理后台</td>
+<td>审核报单、驳回并填写原因、查看审核统计</td>
+</tr>
+<tr>
+<td>运营专员</td>
+<td>管理后台</td>
+<td>配置任务模板、发布场次、设置名额与时间、发布公告</td>
+</tr>
+<tr>
+<td>关系管理员</td>
+<td>管理后台</td>
+<td>维护推荐关系、导入星际未来关系表、调整上下级</td>
+</tr>
+<tr>
+<td>财务/对账员</td>
+<td>管理后台</td>
+<td>导出审核结果、与商城对账、查看统计报表</td>
+</tr>
+<tr>
+<td>超级管理员</td>
+<td>管理后台</td>
+<td>全部权限 + 账号管理 + 系统设置 + 查看操作日志</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22">2.2 权限矩阵</h3>
+<blockquote>
+<p>✅ = 有权限　🔍 = 只读　❌ = 无权限</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>功能模块</th>
+<th style="text-align: center;">普通会员</th>
+<th style="text-align: center;">团队长</th>
+<th style="text-align: center;">审核员</th>
+<th style="text-align: center;">运营专员</th>
+<th style="text-align: center;">关系管理员</th>
+<th style="text-align: center;">对账员</th>
+<th style="text-align: center;">超管</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>注册/登录</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>抢单/提交任务</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td>查看本人报单</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>查看团队报单</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">🔍</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">🔍</td>
+<td style="text-align: center;">🔍</td>
+<td style="text-align: center;">🔍</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>会员列表管理</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">🔍</td>
+<td style="text-align: center;">🔍</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">🔍</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>推荐关系调整</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>任务模板配置</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>场次发布/名额设置</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>审核报单</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>导出对账数据</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">🔍</td>
+<td style="text-align: center;">🔍</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>风控告警处理</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">🔍</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>后台账号管理</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td>操作日志查询</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+</tr>
+</tbody>
+</table>
+<p><strong>权限实现方式</strong>：采用 RBAC（角色-权限-用户）模型，权限点细化到接口级别，后台支持自定义角色并勾选权限点。</p>
+<hr />
+<h2 id="_4">三、核心业务流程</h2>
+<h3 id="31">3.1 系统整体流程</h3>
+<pre><code>星际未来平台                报单系统（本期开发）              外部商城
+    │                            │                            │
+    │  导出推荐关系 Excel         │                            │
+    ├──────────────────────────&gt; │                            │
+    │                            │                            │
+    │                    ┌───────┴────────┐                   │
+    │                    │  会员注册绑定   │                   │
+    │                    │ 邮箱 + 手机号   │                   │
+    │                    └───────┬────────┘                   │
+    │                            │                            │
+    │                    ┌───────┴────────┐                   │
+    │                    │ 人工建立/校正   │                   │
+    │                    │   推荐关系      │                   │
+    │                    └───────┬────────┘                   │
+    │                            │                            │
+    │                    ┌───────┴────────┐                   │
+    │                    │  运营发布任务   │                   │
+    │                    │ 时间+名额+表单  │                   │
+    │                    └───────┬────────┘                   │
+    │                            │                            │
+    │                    ┌───────┴────────┐   会员前往做任务   │
+    │                    │   会员抢名额    │ ────────────────&gt; │
+    │                    └───────┬────────┘                   │
+    │                            │          &lt;──────────────── │
+    │                    ┌───────┴────────┐   获得订单/截图    │
+    │                    │  提交任务材料   │                   │
+    │                    └───────┬────────┘                   │
+    │                            │                            │
+    │                    ┌───────┴────────┐                   │
+    │                    │   人工审核      │                   │
+    │                    └───────┬────────┘                   │
+    │                            │                            │
+    │                    ┌───────┴────────┐   导出对账文件     │
+    │                    │  导出 Excel     │ ────────────────&gt; │
+    │                    └────────────────┘                   │
+</code></pre>
+<h3 id="32">3.2 注册与账号绑定流程</h3>
+<pre><code>开始
+ ↓
+填写星际未来邮箱 ──&gt; 格式校验 ──&gt; 是否已被注册？──是──&gt; 提示&quot;该邮箱已注册&quot; ──&gt; 结束
+ ↓ 否
+填写商城手机号 ──&gt; 格式校验 ──&gt; 是否已被绑定？──是──&gt; 提示&quot;该手机号已绑定其他账号&quot; ──&gt; 结束
+ ↓ 否
+[可选] 短信验证码校验手机号真实性
+ ↓
+填写推荐人邮箱（选填）──&gt; 校验该邮箱是否存在
+ ↓
+设置登录密码 + 确认密码 ──&gt; 强度校验（8位以上，含字母数字）
+ ↓
+勾选服务协议
+ ↓
+提交注册
+ ↓
+系统创建账号，状态 = 待审核（可配置为直接生效）
+ ↓
+若填写了推荐人 ──&gt; 自动建立推荐关系（来源标记 = 注册填写）
+若未填写 ──&gt; 挂入&quot;待分配&quot;池，等待关系管理员人工指定
+ ↓
+后台审核通过 ──&gt; 账号生效，可登录抢单
+ ↓
+结束
+</code></pre>
+<p><strong>关键规则</strong></p>
+<ul>
+<li>邮箱与手机号均为<strong>全局唯一</strong>，数据库层面加唯一索引兜底</li>
+<li>密码使用 <strong>bcrypt</strong>（cost=10）加盐哈希存储，禁止明文或可逆加密</li>
+<li>注册是否需要人工审核，由后台开关控制（默认开启，防止批量注册）</li>
+<li>手机号短信验证为可选项，由后台开关控制（考虑短信成本）</li>
+<li>注册时可强制要求填写推荐人邮箱，由后台开关控制</li>
+</ul>
+<h3 id="33">3.3 抢单—做单—提交—审核 主流程</h3>
+<pre><code>【运营侧】
+配置任务模板（表单字段） ──&gt; 发布任务场次（日期/开始时间/截止时间/总名额/单人限额/占位时长）
+ ↓
+【会员侧】
+进入任务大厅 ──&gt; 查看任务列表（显示剩余名额、倒计时）
+ ↓
+未到开始时间 ──&gt; 按钮置灰&quot;未开始&quot;，显示倒计时
+已过截止时间 ──&gt; 按钮置灰&quot;已结束&quot;
+名额已抢完   ──&gt; 按钮置灰&quot;已抢完&quot;
+ ↓ 可抢
+点击【抢名额】
+ ↓
+后端并发扣减名额（Redis 原子操作）
+ ├─ 失败（名额不足）──&gt; 提示&quot;手慢了，名额已被抢完&quot;
+ ├─ 失败（超出单人限额）──&gt; 提示&quot;您已达到今日上限&quot;
+ └─ 成功
+     ↓
+   生成报单记录，状态 = 已抢占（CLAIMED）
+   启动占位倒计时（如 60 分钟）
+     ↓
+   会员前往商城完成实际任务
+     ↓
+   ┌────────────────────────────────┐
+   │ 在占位有效期内点击【提交任务】   │
+   └────────────────────────────────┘
+     ↓                          ↓ 超时未提交
+   填写动态表单              名额自动释放，回补库存
+   上传截图                  报单状态 = 已过期（EXPIRED）
+     ↓
+   前端校验（必填/格式/图片数量）
+     ↓
+   提交 ──&gt; 后端二次校验 + 订单号唯一性校验 + 图片查重
+     ↓
+   状态 = 待审核（PENDING）
+     ↓
+【审核侧】
+审核员进入工作台 ──&gt; 筛选待审核 ──&gt; 逐条查看材料
+     ↓
+  ┌──────────┬──────────┐
+  通过         驳回
+  ↓            ↓
+状态=APPROVED  状态=REJECTED + 驳回原因
+              ↓
+        是否允许重新提交？
+        ├─ 是 ──&gt; 会员可修改后再次提交（回到 PENDING，重提次数+1）
+        └─ 否 ──&gt; 流程终止
+     ↓
+【对账侧】
+按日期/任务筛选 ──&gt; 导出 Excel ──&gt; 与商城核对
+</code></pre>
+<h3 id="34">3.4 名额与超时释放机制</h3>
+<p>名额是本系统最核心的稀缺资源，必须保证<strong>不超发、不浪费</strong>。</p>
+<pre><code>总名额 100
+   │
+   ├── 已抢占未提交（CLAIMED）    占用中，倒计时进行
+   │        │
+   │        ├── 按时提交 ──&gt; 转为 PENDING（仍占用名额）
+   │        ├── 超时未提交 ──&gt; EXPIRED，名额回补 +1
+   │        └── 主动放弃 ──&gt; CANCELLED，名额回补 +1
+   │
+   ├── 待审核（PENDING）          占用中
+   │        ├── 审核通过 ──&gt; APPROVED（永久占用）
+   │        └── 审核驳回 ──&gt; REJECTED
+   │                 ├── 允许重提 ──&gt; 仍占用名额，等待会员修改
+   │                 └── 不允许重提 ──&gt; 名额回补 +1（可配置）
+   │
+   └── 剩余可抢名额 = 总名额 - 占用中数量
+</code></pre>
+<p><strong>释放策略配置项</strong></p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>说明</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>占位有效期</td>
+<td>抢单后多久内必须提交</td>
+<td>60 分钟</td>
+</tr>
+<tr>
+<td>超时是否释放</td>
+<td>超时后名额是否回补给他人</td>
+<td>是</td>
+</tr>
+<tr>
+<td>驳回是否释放</td>
+<td>审核驳回后名额是否回补</td>
+<td>否（允许重提）</td>
+</tr>
+<tr>
+<td>允许主动放弃</td>
+<td>会员可否主动取消已抢名额</td>
+<td>是</td>
+</tr>
+<tr>
+<td>放弃惩罚</td>
+<td>当日放弃超过 N 次后禁止再抢</td>
+<td>3 次</td>
+</tr>
+<tr>
+<td>场次结束后处理</td>
+<td>截止时间到达时未提交的记录如何处理</td>
+<td>全部置为 EXPIRED</td>
+</tr>
+</tbody>
+</table>
+<p><strong>技术实现</strong>：采用 Redis 延迟队列（或 BullMQ delayed job）+ 定时兜底扫描双重保障。延迟任务在抢单成功时投递，到期检查状态；定时任务每分钟扫描一次，捕获延迟队列丢失的漏网记录。</p>
+<hr />
+<h3 id="35">3.5 推荐关系建立与调整流程</h3>
+<p>由于商城侧没有推荐关系，报单系统需要以<strong>星际未来邮箱</strong>为桥梁重建关系树。系统提供三种建立方式：</p>
+<p><strong>方式一：注册时自主填写（覆盖率约 60-70%）</strong></p>
+<p>会员注册时填写推荐人的星际未来邮箱，系统校验该邮箱存在后自动建立父子关系，标记来源为 <code>SELF_INPUT</code>。</p>
+<p><strong>方式二：Excel 批量导入（推荐，覆盖率最高）</strong></p>
+<pre><code>星际未来后台导出推荐关系表
+ ↓
+Excel 格式：会员邮箱 | 上级邮箱 | 会员昵称 | 注册时间
+ ↓
+关系管理员上传至报单系统
+ ↓
+系统解析并逐行校验
+ ├─ 会员邮箱在报单系统不存在 ──&gt; 记录到&quot;未注册名单&quot;，跳过
+ ├─ 上级邮箱不存在 ──&gt; 记录异常，标记待处理
+ ├─ 会检测环路（A→B→C→A）──&gt; 拒绝该行并报错
+ └─ 校验通过 ──&gt; 加入待确认列表
+ ↓
+展示预览：新增 X 条、变更 Y 条、冲突 Z 条
+ ↓
+管理员确认 ──&gt; 事务提交，全量重算 path 与 depth
+ ↓
+生成变更日志（谁、何时、从哪个上级改到哪个上级）
+</code></pre>
+<p><strong>方式三：后台单条人工调整</strong></p>
+<p>关系管理员在会员详情页直接修改上级，用于处理个案纠纷或新增会员。</p>
+<p><strong>调整时的子树迁移逻辑</strong></p>
+<p>当把会员 B 从上级 A 迁移到上级 C 时：</p>
+<ol>
+<li>校验 C 不在 B 的子树内（防止形成环路）</li>
+<li>更新 B 的 <code>parent_id = C</code>、<code>depth = C.depth + 1</code></li>
+<li>计算路径前缀差值，批量更新 B 及其所有后代的 <code>path</code> 与 <code>depth</code></li>
+<li>整个过程在<strong>单个数据库事务</strong>内完成</li>
+<li>写入 <code>referral_change_log</code>，记录操作人、时间、变更前后、原因</li>
+</ol>
+<pre><code class="language-sql">-- 子树路径批量更新示例（PostgreSQL）
+UPDATE members
+SET path = :new_prefix || SUBSTRING(path FROM LENGTH(:old_prefix) + 1),
+    depth = depth + :depth_delta
+WHERE path LIKE :old_prefix || '%';
+</code></pre>
+<h3 id="36">3.6 对账与导出流程</h3>
+<pre><code>对账员进入【导出中心】
+ ↓
+选择筛选条件：
+  · 任务模板（可多选）
+  · 日期范围
+  · 审核状态（默认：仅已通过）
+  · 推荐线（按某个团队长的整个团队筛选）
+  · 会员（模糊搜索邮箱/手机号）
+ ↓
+选择导出模板：
+  · 商城对账模板（精简：手机号、订单号、金额、日期）
+  · 内部结算模板（完整：含推荐关系、审核信息）
+  · 自定义字段模板（勾选需要的列）
+ ↓
+点击导出
+ ↓
+数据量判断
+ ├─ ≤ 5000 条 ──&gt; 同步生成，浏览器直接下载
+ └─ &gt; 5000 条 ──&gt; 异步任务，生成后站内信/邮件通知，在【导出记录】下载
+ ↓
+生成 Excel（.xlsx），图片以 URL 形式呈现（可选择打包 ZIP 下载原图）
+ ↓
+记录导出日志（谁导出了什么范围的数据，防止数据泄露）
+</code></pre>
+<hr />
+<h2 id="_5">四、功能需求详述</h2>
+<h3 id="41-h5">4.1 会员端（H5）</h3>
+<h4 id="411">4.1.1 注册页</h4>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>校验规则</th>
+<th>必填</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>星际未来邮箱</td>
+<td>邮箱</td>
+<td>标准邮箱格式，系统内唯一，失焦即时查重</td>
+<td>是</td>
+</tr>
+<tr>
+<td>商城手机号</td>
+<td>手机号</td>
+<td>11 位大陆手机号，系统内唯一，失焦即时查重</td>
+<td>是</td>
+</tr>
+<tr>
+<td>短信验证码</td>
+<td>数字</td>
+<td>6 位，5 分钟有效，60 秒重发限制</td>
+<td>可配置</td>
+</tr>
+<tr>
+<td>登录密码</td>
+<td>密码</td>
+<td>8-20 位，必须含字母和数字，实时显示强度</td>
+<td>是</td>
+</tr>
+<tr>
+<td>确认密码</td>
+<td>密码</td>
+<td>与密码一致</td>
+<td>是</td>
+</tr>
+<tr>
+<td>推荐人邮箱</td>
+<td>邮箱</td>
+<td>必须是已注册的星际未来邮箱</td>
+<td>可配置</td>
+</tr>
+<tr>
+<td>真实姓名</td>
+<td>文本</td>
+<td>2-20 字符</td>
+<td>可配置</td>
+</tr>
+<tr>
+<td>服务协议</td>
+<td>勾选</td>
+<td>必须勾选</td>
+<td>是</td>
+</tr>
+</tbody>
+</table>
+<p><strong>交互要点</strong></p>
+<ul>
+<li>邮箱和手机号采用<strong>失焦异步查重</strong>，即时反馈，避免提交后才报错</li>
+<li>注册成功后展示"审核中"状态页，说明预计审核时长</li>
+<li>图形验证码或行为验证（滑块）防止脚本批量注册</li>
+</ul>
+<h4 id="412">4.1.2 登录与密码找回</h4>
+<ul>
+<li>支持<strong>邮箱</strong>或<strong>手机号</strong>任一方式登录</li>
+<li>密码连续输错 5 次，账号锁定 30 分钟</li>
+<li>找回密码：手机号 + 短信验证码 → 重置密码（邮箱找回作为备选，需配置邮件服务）</li>
+<li>登录态使用 JWT，Access Token 有效期 2 小时，Refresh Token 7 天</li>
+<li>支持后台强制下线某会员</li>
+</ul>
+<h4 id="413">4.1.3 任务大厅（首页）</h4>
+<p><strong>页面结构</strong></p>
+<pre><code>┌─────────────────────────────────┐
+│  顶部：会员昵称 / 今日已完成 X 单  │
+│  公告轮播条                       │
+├─────────────────────────────────┤
+│  Tab：进行中 | 即将开始 | 已结束   │
+├─────────────────────────────────┤
+│  ┌───────────────────────────┐  │
+│  │ [任务封面图]                │  │
+│  │ 任务名称           剩 32/100│  │
+│  │ 09:00 - 21:00              │  │
+│  │ 距离结束 03:24:15          │  │
+│  │ 任务说明摘要...             │  │
+│  │              [ 抢名额 ]     │  │
+│  └───────────────────────────┘  │
+│  ...更多任务卡片                  │
+└─────────────────────────────────┘
+</code></pre>
+<p><strong>核心逻辑</strong></p>
+<ul>
+<li>剩余名额采用<strong>轮询刷新</strong>（每 5 秒）或 WebSocket 推送，保证准确性</li>
+<li>倒计时基于<strong>服务器时间</strong>校准，防止用户改本地时间作弊</li>
+<li>按钮状态：未开始（置灰+倒计时）/ 可抢（高亮）/ 已抢完（置灰）/ 已结束（置灰）/ 已达上限（置灰+提示）</li>
+<li>已抢占未提交的任务，卡片顶部显示醒目提醒条和提交倒计时</li>
+</ul>
+<h4 id="414">4.1.4 抢名额</h4>
+<p><strong>交互流程</strong></p>
+<ol>
+<li>点击【抢名额】→ 二次确认弹窗（说明占位有效期与规则）</li>
+<li>确认后按钮进入 loading，禁止重复点击</li>
+<li>请求携带<strong>幂等 Token</strong>（前端生成 UUID，后端在 Redis 去重，5 分钟内相同 Token 直接返回首次结果）</li>
+<li>成功 → 跳转到任务提交页，或返回大厅并展示"抢单成功"提示 + 倒计时</li>
+<li>失败 → 明确区分失败原因并友好提示</li>
+</ol>
+<p><strong>失败原因枚举</strong></p>
+<table>
+<thead>
+<tr>
+<th>错误码</th>
+<th>提示文案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>QUOTA_SOLD_OUT</td>
+<td>手慢了，名额已被抢完</td>
+</tr>
+<tr>
+<td>NOT_STARTED</td>
+<td>任务尚未开始，请耐心等待</td>
+</tr>
+<tr>
+<td>ALREADY_ENDED</td>
+<td>任务已结束</td>
+</tr>
+<tr>
+<td>USER_LIMIT_EXCEEDED</td>
+<td>您今日抢单已达上限</td>
+</tr>
+<tr>
+<td>HAS_UNSUBMITTED</td>
+<td>您还有未提交的任务，请先完成</td>
+</tr>
+<tr>
+<td>ACCOUNT_RESTRICTED</td>
+<td>账号异常，请联系管理员</td>
+</tr>
+<tr>
+<td>CANCEL_TOO_MANY</td>
+<td>今日放弃次数过多，暂时无法抢单</td>
+</tr>
+</tbody>
+</table>
+<h4 id="415">4.1.5 任务提交（动态表单）</h4>
+<ul>
+<li>表单字段完全由后台配置的 Schema 渲染</li>
+<li>图片上传支持<strong>多选、拖拽排序、预览、删除</strong></li>
+<li>图片前端自动压缩（长边 ≤ 1920px，质量 0.8），减少上传耗时与存储成本</li>
+<li>上传采用<strong>直传对象存储</strong>（后端签发临时凭证），不经过应用服务器</li>
+<li>支持<strong>草稿自动保存</strong>（本地 localStorage + 服务端草稿接口），防止误关页面丢失</li>
+<li>提交前展示确认弹窗，列出关键信息供核对</li>
+<li>提交成功后跳转至报单详情页，显示"审核中"</li>
+</ul>
+<h4 id="416">4.1.6 我的报单</h4>
+<ul>
+<li>列表按时间倒序，支持按状态筛选（全部/待提交/待审核/已通过/已驳回/已过期）</li>
+<li>每条展示：任务名称、提交时间、状态标签、关键字段摘要（如订单号）</li>
+<li>已驳回的记录高亮显示驳回原因，并提供【重新提交】入口（若允许）</li>
+<li>详情页完整展示提交内容、图片大图预览、审核记录时间轴</li>
+</ul>
+<h4 id="417">4.1.7 我的团队</h4>
+<ul>
+<li>展示直推人数、团队总人数、今日团队报单数、本月团队报单数</li>
+<li>树形/列表展示下级（默认展示直推，可逐层展开）</li>
+<li>下级信息<strong>脱敏</strong>：邮箱显示为 <code>abc***@xx.com</code>，手机号显示为 <code>138****8888</code></li>
+<li>团队长角色可查看团队报单明细（只读）</li>
+<li>提供"我的推荐邮箱"复制功能，方便邀请新人</li>
+</ul>
+<h4 id="418">4.1.8 消息中心</h4>
+<table>
+<thead>
+<tr>
+<th>消息类型</th>
+<th>触发时机</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>抢单成功通知</td>
+<td>抢单成功时，含提交截止时间</td>
+</tr>
+<tr>
+<td>提交超时提醒</td>
+<td>占位有效期剩余 15 分钟时</td>
+</tr>
+<tr>
+<td>名额释放通知</td>
+<td>超时未提交，名额被回收</td>
+</tr>
+<tr>
+<td>审核通过通知</td>
+<td>审核员点击通过</td>
+</tr>
+<tr>
+<td>审核驳回通知</td>
+<td>审核员驳回，含原因</td>
+</tr>
+<tr>
+<td>新任务发布</td>
+<td>运营发布新场次（可配置是否推送）</td>
+</tr>
+<tr>
+<td>系统公告</td>
+<td>运营手动发布</td>
+</tr>
+</tbody>
+</table>
+<h4 id="419">4.1.9 个人中心</h4>
+<ul>
+<li>查看/修改昵称、头像</li>
+<li>查看星际未来邮箱、商城手机号（<strong>不可自行修改</strong>，需申请后台变更）</li>
+<li>修改登录密码</li>
+<li>提交手机号变更申请（走后台审核，防止刷单换号）</li>
+<li>退出登录</li>
+</ul>
+<hr />
+<h3 id="42">4.2 管理后台</h3>
+<h4 id="421">4.2.1 数据看板</h4>
+<p><strong>核心指标卡</strong></p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>今日报单数</td>
+<td>今日提交总量</td>
+</tr>
+<tr>
+<td>待审核数</td>
+<td>当前积压待审核量（红色高亮）</td>
+</tr>
+<tr>
+<td>今日通过/驳回</td>
+<td>审核结果分布</td>
+</tr>
+<tr>
+<td>名额使用率</td>
+<td>已占用名额 / 总名额</td>
+</tr>
+<tr>
+<td>累计会员数</td>
+<td>总注册数 / 今日新增</td>
+</tr>
+<tr>
+<td>活跃会员数</td>
+<td>今日有报单行为的会员数</td>
+</tr>
+<tr>
+<td>超时释放数</td>
+<td>今日因超时被回收的名额数</td>
+</tr>
+<tr>
+<td>风控告警数</td>
+<td>待处理的可疑记录数</td>
+</tr>
+</tbody>
+</table>
+<p><strong>图表</strong></p>
+<ul>
+<li>近 30 天报单趋势折线图（提交量 / 通过量 / 驳回量）</li>
+<li>任务维度报单量排行 TOP 10 柱状图</li>
+<li>团队维度业绩排行 TOP 10</li>
+<li>审核员工作量与通过率统计</li>
+<li>名额消耗速度曲线（用于判断名额设置是否合理）</li>
+</ul>
+<h4 id="422">4.2.2 会员管理</h4>
+<p><strong>列表功能</strong></p>
+<ul>
+<li>筛选：邮箱、手机号、昵称、注册时间、状态、上级邮箱、是否有推荐关系</li>
+<li>列：ID、邮箱、手机号、昵称、上级、直推数、团队数、累计报单、通过率、注册时间、状态</li>
+<li>批量操作：批量启用/禁用、批量审核通过、批量导出</li>
+</ul>
+<p><strong>单个会员操作</strong></p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>查看详情</td>
+<td>基础信息 + 推荐关系 + 报单历史 + 登录日志</td>
+</tr>
+<tr>
+<td>审核注册</td>
+<td>通过 / 拒绝（填写原因）</td>
+</tr>
+<tr>
+<td>启用/禁用</td>
+<td>禁用后无法登录和抢单</td>
+</tr>
+<tr>
+<td>加入黑名单</td>
+<td>禁用 + 标记风险 + 记录原因</td>
+</tr>
+<tr>
+<td>重置密码</td>
+<td>生成随机密码或发送重置链接</td>
+</tr>
+<tr>
+<td>修改邮箱/手机号</td>
+<td>需填写变更原因，全程留痕</td>
+</tr>
+<tr>
+<td>调整上级</td>
+<td>跳转推荐关系管理</td>
+</tr>
+<tr>
+<td>强制下线</td>
+<td>使当前 Token 失效</td>
+</tr>
+<tr>
+<td>设为团队长</td>
+<td>授予团队数据查看权限</td>
+</tr>
+</tbody>
+</table>
+<h4 id="423">4.2.3 推荐关系管理</h4>
+<p><strong>功能清单</strong></p>
+<ul>
+<li><strong>关系树可视化</strong>：以树形组件展示完整推荐结构，支持搜索定位、展开/折叠、层级着色</li>
+<li><strong>待分配池</strong>：列出注册时未填写推荐人的会员，管理员逐个或批量指定上级</li>
+<li><strong>单条调整</strong>：搜索会员 → 指定新上级 → 填写调整原因 → 提交（系统自动校验环路并迁移子树）</li>
+<li><strong>批量导入</strong>：上传星际未来导出的 Excel，系统解析、校验、预览差异、确认后应用</li>
+<li><strong>差异比对</strong>：上传星际未来最新关系表，系统输出"与当前系统不一致的记录清单"，支持一键同步或逐条处理</li>
+<li><strong>变更日志</strong>：完整记录每次关系变更（操作人、时间、会员、原上级、新上级、原因、影响人数）</li>
+</ul>
+<p><strong>导入 Excel 模板</strong></p>
+<table>
+<thead>
+<tr>
+<th>列名</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>会员邮箱</td>
+<td>是</td>
+<td>星际未来邮箱</td>
+</tr>
+<tr>
+<td>上级邮箱</td>
+<td>否</td>
+<td>留空表示顶级会员</td>
+</tr>
+<tr>
+<td>会员昵称</td>
+<td>否</td>
+<td>用于核对</td>
+</tr>
+<tr>
+<td>备注</td>
+<td>否</td>
+<td>导入说明</td>
+</tr>
+</tbody>
+</table>
+<p><strong>校验规则</strong></p>
+<ul>
+<li>邮箱格式校验</li>
+<li>会员邮箱必须已在报单系统注册（否则计入"未注册名单"单独导出）</li>
+<li>上级邮箱必须存在</li>
+<li>不允许自己成为自己的上级</li>
+<li>不允许形成环路（导入前用图算法全量检测）</li>
+<li>同一会员在文件中不能重复出现</li>
+</ul>
+<h4 id="424">4.2.4 任务模板管理（表单设计器）</h4>
+<p><strong>模板基础配置</strong></p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>任务名称</td>
+<td>展示给会员的标题</td>
+</tr>
+<tr>
+<td>任务分类</td>
+<td>用于会员端分组筛选</td>
+</tr>
+<tr>
+<td>封面图</td>
+<td>任务卡片配图</td>
+</tr>
+<tr>
+<td>任务说明</td>
+<td>富文本，支持图文步骤说明</td>
+</tr>
+<tr>
+<td>注意事项</td>
+<td>醒目提示区，如"请勿使用同一账号重复下单"</td>
+</tr>
+<tr>
+<td>表单字段</td>
+<td>见下方设计器</td>
+</tr>
+<tr>
+<td>是否需要审核</td>
+<td>关闭则提交即通过</td>
+</tr>
+<tr>
+<td>允许驳回后重提</td>
+<td>开关 + 最大重提次数</td>
+</tr>
+<tr>
+<td>排序权重</td>
+<td>控制在大厅的展示顺序</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>草稿 / 已启用 / 已停用</td>
+</tr>
+</tbody>
+</table>
+<p><strong>表单设计器</strong></p>
+<p>采用左中右三栏布局：</p>
+<pre><code>┌──────────┬─────────────────────┬──────────────┐
+│ 字段组件库 │      画布（拖拽区）    │  属性配置面板  │
+│           │                     │              │
+│ 单行文本   │  ┌────────────────┐ │ 字段标识：    │
+│ 多行文本   │  │ 订单号 *        │ │ order_no     │
+│ 数字       │  │ [输入框]        │ │ 标题：订单号  │
+│ 金额       │  └────────────────┘ │ 占位提示：... │
+│ 下拉选择   │  ┌────────────────┐ │ 是否必填：✓   │
+│ 单选       │  │ 订单金额 *      │ │ 校验正则：... │
+│ 多选       │  │ [数字输入]      │ │ 全局唯一：✓   │
+│ 日期时间   │  └────────────────┘ │ 错误提示：... │
+│ 图片上传   │  ┌────────────────┐ │              │
+│ 文件上传   │  │ 订单截图 *      │ │              │
+│ 说明文字   │  │ [上传区 最多3张] │ │              │
+│ 分割线     │  └────────────────┘ │              │
+└──────────┴─────────────────────┴──────────────┘
+              [ 预览 ]  [ 保存草稿 ]  [ 发布 ]
+</code></pre>
+<p><strong>版本管理</strong>：模板每次发布生成新版本号，历史报单记录关联提交时的版本号，保证旧数据渲染不错乱。已有报单的模板不允许删除字段，只允许新增或停用字段。</p>
+<h4 id="425">4.2.5 任务场次发布</h4>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>关联任务模板</td>
+<td>选择</td>
+<td>选择已发布的模板</td>
+</tr>
+<tr>
+<td>场次日期</td>
+<td>日期</td>
+<td>任务所属日期</td>
+</tr>
+<tr>
+<td>开始时间</td>
+<td>时间</td>
+<td>到点后才能抢单</td>
+</tr>
+<tr>
+<td>截止时间</td>
+<td>时间</td>
+<td>过点后无法抢单和提交</td>
+</tr>
+<tr>
+<td>总名额</td>
+<td>数字</td>
+<td>本场次可被抢占的总数</td>
+</tr>
+<tr>
+<td>单人最大抢单数</td>
+<td>数字</td>
+<td>单个会员在本场次的上限</td>
+</tr>
+<tr>
+<td>占位有效期</td>
+<td>数字（分钟）</td>
+<td>抢单后必须提交的时限</td>
+</tr>
+<tr>
+<td>是否允许放弃</td>
+<td>开关</td>
+<td>会员可否主动取消</td>
+</tr>
+<tr>
+<td>可见范围</td>
+<td>选择</td>
+<td>全部会员 / 指定团队 / 指定等级 / 白名单</td>
+</tr>
+<tr>
+<td>单价/佣金</td>
+<td>金额</td>
+<td>用于统计与后续结算（本期仅记录）</td>
+</tr>
+<tr>
+<td>备注</td>
+<td>文本</td>
+<td>内部说明</td>
+</tr>
+</tbody>
+</table>
+<p><strong>批量与周期发布</strong></p>
+<ul>
+<li>支持一次性生成未来 N 天的场次（如"接下来 30 天，每天 09:00-21:00，各 100 个名额"）</li>
+<li>支持周期规则：仅工作日 / 仅周末 / 每周指定几天</li>
+<li>支持复制历史场次快速创建</li>
+<li>支持场次进行中<strong>追加名额</strong>（只允许增加，不允许减少到低于已占用数）</li>
+<li>支持<strong>紧急暂停</strong>场次（已抢占的仍可提交，但不允许新增抢单）</li>
+</ul>
+<h4 id="426">4.2.6 审核工作台</h4>
+<p><strong>设计目标</strong>：让审核员用最少的点击完成最多的审核，单条平均耗时控制在 15 秒内。</p>
+<p><strong>列表模式</strong></p>
+<ul>
+<li>筛选：任务、日期范围、状态、会员邮箱/手机号、订单号、推荐线、审核员、风险标记</li>
+<li>排序：提交时间正序（先提交先审）/ 倒序 / 风险等级</li>
+<li>列表展示关键字段 + 图片缩略图，鼠标悬停放大</li>
+<li>支持<strong>批量通过</strong>（勾选多条 → 一键通过）</li>
+<li>支持<strong>批量驳回</strong>（勾选多条 → 选择统一原因）</li>
+</ul>
+<p><strong>逐条审核模式（推荐主力模式）</strong></p>
+<pre><code>┌───────────────────────────────────────────────┐
+│  待审核 128 条        当前第 1 条    [跳过] [↑][↓] │
+├─────────────────────────┬─────────────────────┤
+│                         │  会员：abc@mail.com   │
+│                         │  手机：138****8888    │
+│      [ 提交的截图 ]      │  上级：xyz@mail.com   │
+│      支持缩放/旋转       │  任务：XX商城下单任务  │
+│      多图左右切换        │  订单号：2026081012.. │
+│                         │  金额：￥128.00       │
+│                         │  提交时间：14:23:11   │
+│                         │  ─────────────────   │
+│                         │  ⚠ 风险提示：         │
+│                         │  该图片与报单#8821相似 │
+├─────────────────────────┴─────────────────────┤
+│  [ ✓ 通过 (A) ]   [ ✗ 驳回 (D) ]   [ 标记可疑 ]  │
+└───────────────────────────────────────────────┘
+</code></pre>
+<p><strong>效率优化</strong></p>
+<ul>
+<li><strong>键盘快捷键</strong>：A = 通过，D = 驳回，← → = 上一条/下一条，1-9 = 快速选择驳回原因</li>
+<li>通过后<strong>自动跳转下一条</strong>，无需返回列表</li>
+<li>图片<strong>预加载</strong>下一条，消除等待</li>
+<li>驳回原因支持<strong>预设模板</strong>（截图不清晰、订单号不符、金额不符、非本人账号、重复提交、订单已取消、其他）</li>
+<li>审核完成后显示本次审核统计（共审 X 条，通过 Y，驳回 Z，耗时 N 分钟）</li>
+</ul>
+<p><strong>审核规则</strong></p>
+<ul>
+<li>同一条报单<strong>同时只能被一名审核员锁定</strong>（Redis 分布式锁，防止重复审核）</li>
+<li>锁定超时 5 分钟自动释放</li>
+<li>审核记录不可删除，只能追加"撤销审核"操作（需超管权限，全程留痕）</li>
+<li>支持配置<strong>双审模式</strong>（初审 + 复审），针对高金额任务</li>
+</ul>
+<h4 id="427">4.2.7 导出与对账中心</h4>
+<p><strong>导出模板配置</strong></p>
+<p>后台可配置多套导出模板，每套模板定义列名、字段映射、顺序、格式化规则。</p>
+<p><strong>内置模板：商城对账模板</strong></p>
+<table>
+<thead>
+<tr>
+<th>列</th>
+<th>字段来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>序号</td>
+<td>自增</td>
+</tr>
+<tr>
+<td>商城手机号</td>
+<td>member.mall_phone</td>
+</tr>
+<tr>
+<td>订单号</td>
+<td>submission.form_data.order_no</td>
+</tr>
+<tr>
+<td>订单金额</td>
+<td>submission.form_data.amount</td>
+</tr>
+<tr>
+<td>任务名称</td>
+<td>task_template.name</td>
+</tr>
+<tr>
+<td>任务日期</td>
+<td>task_instance.date</td>
+</tr>
+<tr>
+<td>提交时间</td>
+<td>submission.submitted_at</td>
+</tr>
+<tr>
+<td>审核状态</td>
+<td>submission.status</td>
+</tr>
+<tr>
+<td>审核时间</td>
+<td>submission.reviewed_at</td>
+</tr>
+</tbody>
+</table>
+<p><strong>内置模板：内部结算模板</strong></p>
+<p>在上表基础上追加：星际未来邮箱、会员昵称、上级邮箱、团队长、审核员、驳回原因、图片链接、单价、应结金额。</p>
+<p><strong>其他能力</strong></p>
+<ul>
+<li>导出记录页：记录每次导出的操作人、条件、条数、文件、时间，文件保留 30 天</li>
+<li>图片打包：可选择将本次导出涉及的所有图片打包为 ZIP，按 <code>日期/手机号/订单号_序号.jpg</code> 命名</li>
+<li>反向核对：支持上传商城的结算表，系统自动比对差异，输出"我方有商城无"和"商城有我方无"两张差异清单（<strong>强烈建议纳入本期</strong>，能极大降低对账成本）</li>
+</ul>
+<h4 id="428">4.2.8 风控中心</h4>
+<p><strong>告警规则（均可后台开关与调参）</strong></p>
+<table>
+<thead>
+<tr>
+<th>规则</th>
+<th>判定条件</th>
+<th>处置建议</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>图片重复</td>
+<td>MD5 完全一致或感知哈希相似度 &gt; 90%</td>
+<td>拦截提交或标记人工复核</td>
+</tr>
+<tr>
+<td>订单号重复</td>
+<td>订单号在系统内已存在</td>
+<td>直接拦截提交</td>
+</tr>
+<tr>
+<td>同 IP 聚集</td>
+<td>同一 IP 下 24 小时内超过 N 个账号提交</td>
+<td>标记可疑</td>
+</tr>
+<tr>
+<td>同设备聚集</td>
+<td>同一设备指纹关联多个账号</td>
+<td>标记可疑</td>
+</tr>
+<tr>
+<td>提交过快</td>
+<td>抢单到提交间隔 &lt; 30 秒</td>
+<td>标记可疑</td>
+</tr>
+<tr>
+<td>高驳回率</td>
+<td>会员累计驳回率 &gt; 50% 且样本 ≥ 10</td>
+<td>限制抢单</td>
+</tr>
+<tr>
+<td>频繁放弃</td>
+<td>单日放弃次数 &gt; 3</td>
+<td>当日禁止抢单</td>
+</tr>
+<tr>
+<td>金额异常</td>
+<td>提交金额偏离任务预期区间</td>
+<td>标记复核</td>
+</tr>
+<tr>
+<td>夜间集中提交</td>
+<td>凌晨时段大量提交</td>
+<td>提示关注</td>
+</tr>
+</tbody>
+</table>
+<p><strong>告警处理</strong></p>
+<ul>
+<li>告警列表支持标记为"已处理/误报/确认违规"</li>
+<li>确认违规可一键：驳回报单 / 禁用账号 / 加入黑名单</li>
+<li>黑名单支持按邮箱、手机号、IP、设备指纹维度</li>
+</ul>
+<h4 id="429">4.2.9 系统设置</h4>
+<ul>
+<li><strong>账号与角色</strong>：后台账号 CRUD、角色管理、权限点勾选</li>
+<li><strong>公告管理</strong>：发布/编辑/置顶/下架公告，支持定时发布</li>
+<li><strong>参数配置</strong>：注册开关、注册是否需审核、短信验证开关、默认占位时长、密码策略、单文件大小上限等</li>
+<li><strong>操作日志</strong>：所有后台写操作全量记录（操作人、IP、时间、模块、动作、变更前后 JSON Diff），支持按人/模块/时间检索</li>
+<li><strong>数据字典</strong>：驳回原因、任务分类等枚举值维护</li>
+</ul>
+<hr />
+<h2 id="_6">五、动态表单引擎设计</h2>
+<h3 id="51">5.1 设计目标</h3>
+<p>任务表单必须<strong>完全后台可配置</strong>，运营人员新增任务类型、调整字段时<strong>无需研发介入、无需发版</strong>。这是本系统能否长期低成本运营的关键。</p>
+<h3 id="52">5.2 字段类型清单</h3>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>type</th>
+<th>配置项</th>
+<th>存储格式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单行文本</td>
+<td><code>text</code></td>
+<td>最大长度、正则、占位符、是否唯一</td>
+<td>string</td>
+</tr>
+<tr>
+<td>多行文本</td>
+<td><code>textarea</code></td>
+<td>最大长度、行数</td>
+<td>string</td>
+</tr>
+<tr>
+<td>数字</td>
+<td><code>number</code></td>
+<td>最小值、最大值、小数位数</td>
+<td>number</td>
+</tr>
+<tr>
+<td>金额</td>
+<td><code>money</code></td>
+<td>币种、小数位、最小/最大</td>
+<td>number</td>
+</tr>
+<tr>
+<td>下拉选择</td>
+<td><code>select</code></td>
+<td>选项列表、是否多选</td>
+<td>string / string[]</td>
+</tr>
+<tr>
+<td>单选</td>
+<td><code>radio</code></td>
+<td>选项列表、排列方向</td>
+<td>string</td>
+</tr>
+<tr>
+<td>多选</td>
+<td><code>checkbox</code></td>
+<td>选项列表、最少/最多选择数</td>
+<td>string[]</td>
+</tr>
+<tr>
+<td>日期</td>
+<td><code>date</code></td>
+<td>格式、可选范围</td>
+<td>string (ISO)</td>
+</tr>
+<tr>
+<td>日期时间</td>
+<td><code>datetime</code></td>
+<td>格式、可选范围</td>
+<td>string (ISO)</td>
+</tr>
+<tr>
+<td>图片上传</td>
+<td><code>image</code></td>
+<td>最少/最多张数、单张大小上限、是否查重</td>
+<td>string[] (URL)</td>
+</tr>
+<tr>
+<td>文件上传</td>
+<td><code>file</code></td>
+<td>允许扩展名、大小上限</td>
+<td>string[] (URL)</td>
+</tr>
+<tr>
+<td>手机号</td>
+<td><code>phone</code></td>
+<td>是否校验归属地</td>
+<td>string</td>
+</tr>
+<tr>
+<td>订单号</td>
+<td><code>order_no</code></td>
+<td>正则、<strong>全局唯一</strong>（防重复报单核心）</td>
+<td>string</td>
+</tr>
+<tr>
+<td>说明文字</td>
+<td><code>description</code></td>
+<td>富文本内容（只读，不参与提交）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>分割线</td>
+<td><code>divider</code></td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-schema">5.3 Schema 结构示例</h3>
+<pre><code class="language-json">{
+  &quot;templateId&quot;: &quot;tpl_mall_order_001&quot;,
+  &quot;version&quot;: 3,
+  &quot;title&quot;: &quot;XX商城日常下单任务&quot;,
+  &quot;fields&quot;: [
+    {
+      &quot;key&quot;: &quot;order_no&quot;,
+      &quot;type&quot;: &quot;order_no&quot;,
+      &quot;label&quot;: &quot;商城订单号&quot;,
+      &quot;placeholder&quot;: &quot;请输入完整订单号，可在商城订单详情页复制&quot;,
+      &quot;required&quot;: true,
+      &quot;unique&quot;: true,
+      &quot;uniqueScope&quot;: &quot;GLOBAL&quot;,
+      &quot;rules&quot;: [
+        { &quot;type&quot;: &quot;regex&quot;, &quot;pattern&quot;: &quot;^[0-9]{15,25}$&quot;, &quot;message&quot;: &quot;订单号应为15-25位数字&quot; }
+      ]
+    },
+    {
+      &quot;key&quot;: &quot;amount&quot;,
+      &quot;type&quot;: &quot;money&quot;,
+      &quot;label&quot;: &quot;订单实付金额&quot;,
+      &quot;required&quot;: true,
+      &quot;min&quot;: 0.01,
+      &quot;max&quot;: 99999,
+      &quot;precision&quot;: 2,
+      &quot;currency&quot;: &quot;CNY&quot;
+    },
+    {
+      &quot;key&quot;: &quot;order_time&quot;,
+      &quot;type&quot;: &quot;datetime&quot;,
+      &quot;label&quot;: &quot;下单时间&quot;,
+      &quot;required&quot;: true,
+      &quot;rules&quot;: [
+        { &quot;type&quot;: &quot;notFuture&quot;, &quot;message&quot;: &quot;下单时间不能晚于当前时间&quot; }
+      ]
+    },
+    {
+      &quot;key&quot;: &quot;order_screenshot&quot;,
+      &quot;type&quot;: &quot;image&quot;,
+      &quot;label&quot;: &quot;订单详情截图&quot;,
+      &quot;required&quot;: true,
+      &quot;minCount&quot;: 1,
+      &quot;maxCount&quot;: 3,
+      &quot;maxSizeMB&quot;: 10,
+      &quot;dedupe&quot;: true,
+      &quot;tip&quot;: &quot;请截取包含订单号、金额、下单时间的完整页面&quot;
+    },
+    {
+      &quot;key&quot;: &quot;pay_screenshot&quot;,
+      &quot;type&quot;: &quot;image&quot;,
+      &quot;label&quot;: &quot;支付成功截图&quot;,
+      &quot;required&quot;: true,
+      &quot;minCount&quot;: 1,
+      &quot;maxCount&quot;: 2,
+      &quot;maxSizeMB&quot;: 10,
+      &quot;dedupe&quot;: true
+    },
+    {
+      &quot;key&quot;: &quot;remark&quot;,
+      &quot;type&quot;: &quot;textarea&quot;,
+      &quot;label&quot;: &quot;备注说明&quot;,
+      &quot;required&quot;: false,
+      &quot;maxLength&quot;: 200
+    }
+  ],
+  &quot;extractFields&quot;: [&quot;order_no&quot;, &quot;amount&quot;],
+  &quot;layout&quot;: { &quot;columns&quot;: 1, &quot;labelPosition&quot;: &quot;top&quot; }
+}
+</code></pre>
+<h3 id="54">5.4 关键设计决策</h3>
+<p><strong>决策一：JSONB 存储 + 关键字段抽取</strong></p>
+<p>表单数据整体以 JSONB 存入 <code>submissions.form_data</code>，保证结构灵活。同时通过 Schema 中的 <code>extractFields</code> 声明关键字段，提交时自动抽取到独立物理列（<code>extract_order_no</code>、<code>extract_amount</code>），用于建索引、做唯一校验、支撑高性能查询与导出。</p>
+<blockquote>
+<p>这是灵活性与查询性能的平衡点。纯 JSONB 查询在数据量大时性能不佳，纯物理列则丧失灵活性。</p>
+</blockquote>
+<p><strong>决策二：模板版本化</strong></p>
+<p>每次发布模板生成新版本号，<code>submissions</code> 记录 <code>template_version</code>。渲染历史报单时按当时的版本 Schema 渲染，保证旧数据永远显示正确。</p>
+<p><strong>决策三：三层校验</strong></p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>位置</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第一层</td>
+<td>前端</td>
+<td>即时反馈，提升体验（可被绕过，不可信）</td>
+</tr>
+<tr>
+<td>第二层</td>
+<td>后端</td>
+<td>依据 Schema 重新执行全部校验（权威校验）</td>
+</tr>
+<tr>
+<td>第三层</td>
+<td>数据库</td>
+<td>唯一索引、非空、外键（最终兜底）</td>
+</tr>
+</tbody>
+</table>
+<p>后端校验必须<strong>独立于前端</strong>完整实现一遍，绝不能因为前端校验过了就跳过。</p>
+<p><strong>决策四：字段变更约束</strong></p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>已有报单数据时</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>新增字段</td>
+<td>✅ 允许</td>
+<td>老数据该字段为空</td>
+</tr>
+<tr>
+<td>修改字段标题/提示</td>
+<td>✅ 允许</td>
+<td>不影响数据</td>
+</tr>
+<tr>
+<td>修改字段类型</td>
+<td>❌ 禁止</td>
+<td>会导致老数据无法解析</td>
+</tr>
+<tr>
+<td>删除字段</td>
+<td>❌ 禁止</td>
+<td>改为"停用"，历史数据仍可查看</td>
+</tr>
+<tr>
+<td>修改 key</td>
+<td>❌ 禁止</td>
+<td>数据键名断裂</td>
+</tr>
+<tr>
+<td>放宽校验规则</td>
+<td>✅ 允许</td>
+<td>—</td>
+</tr>
+<tr>
+<td>收紧校验规则</td>
+<td>⚠️ 警告</td>
+<td>仅对新提交生效，需二次确认</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_7">六、名额与并发控制设计</h2>
+<h3 id="61">6.1 问题描述</h3>
+<p>抢单是典型的<strong>秒杀场景</strong>：2000 人在同一秒争抢 100 个名额。必须解决三个问题：</p>
+<ol>
+<li><strong>超发</strong>：卖出 105 个名额，多出的 5 个无法结算</li>
+<li><strong>少发</strong>：明明有名额却提示抢完，浪费资源、引发投诉</li>
+<li><strong>重复占用</strong>：网络抖动导致用户重复点击，一人占多个名额</li>
+</ol>
+<h3 id="62-redis">6.2 技术方案：Redis 原子扣减 + 数据库唯一索引双保险</h3>
+<pre><code>用户点击抢单
+      ↓
+① 幂等校验（Redis SETNX idempotency:{token}，TTL 5min）
+   命中 ──&gt; 直接返回首次结果
+      ↓ 未命中
+② 前置校验（本地缓存 + Redis）
+   · 场次是否在有效时间内
+   · 用户状态是否正常、是否在黑名单
+   · 用户在本场次已抢数量是否超限（Redis Hash 计数）
+      ↓ 通过
+③ Lua 脚本原子执行（保证操作不可分割）
+   KEYS: quota:{instanceId}, user_count:{instanceId}:{userId}
+   逻辑：
+     if 剩余名额 &lt;= 0 then return -1 end
+     if 用户已抢数 &gt;= 单人上限 then return -2 end
+     DECR 剩余名额
+     HINCRBY 用户已抢数 +1
+     return 剩余名额
+      ↓ 返回 &gt;= 0
+④ 写入数据库（事务）
+   INSERT INTO submissions (..., status='CLAIMED', claim_seq=N)
+   唯一索引：uk_instance_user_seq (instance_id, member_id, claim_seq)
+   ├─ 插入失败（唯一冲突）──&gt; 回滚 Redis 计数，返回&quot;请勿重复操作&quot;
+   └─ 插入成功
+      ↓
+⑤ 投递延迟任务（占位超时检查，delay = 占位有效期）
+      ↓
+⑥ 返回成功 + 提交截止时间戳
+</code></pre>
+<p><strong>Redis 数据结构</strong></p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>trs:quota:{instanceId}</code></td>
+<td>String</td>
+<td>剩余名额计数器</td>
+</tr>
+<tr>
+<td><code>trs:user_claim:{instanceId}</code></td>
+<td>Hash</td>
+<td>field=memberId, value=已抢数量</td>
+</tr>
+<tr>
+<td><code>trs:idem:{token}</code></td>
+<td>String</td>
+<td>幂等令牌，TTL 5 分钟</td>
+</tr>
+<tr>
+<td><code>trs:lock:review:{submissionId}</code></td>
+<td>String</td>
+<td>审核锁，TTL 5 分钟</td>
+</tr>
+</tbody>
+</table>
+<p><strong>缓存预热与一致性</strong></p>
+<ul>
+<li>场次开始前 10 分钟由定时任务预热 Redis 名额计数</li>
+<li>每 30 秒由后台任务用数据库真实占用数<strong>校准</strong> Redis 计数（只在差异超过阈值时修正，并告警）</li>
+<li>Redis 故障降级：切换为数据库悲观锁模式（<code>SELECT ... FOR UPDATE</code>），性能下降但保证正确性</li>
+</ul>
+<h3 id="63">6.3 报单状态机</h3>
+<pre><code>                    ┌──────────────┐
+                    │   CLAIMED    │ 已抢占（占用名额，倒计时中）
+                    └──────┬───────┘
+           ┌───────────────┼───────────────┐
+           │               │               │
+      提交表单         超时未提交       主动放弃
+           ↓               ↓               ↓
+    ┌────────────┐  ┌────────────┐  ┌─────────────┐
+    │  PENDING   │  │  EXPIRED   │  │  CANCELLED  │
+    │  待审核     │  │  已过期     │  │  已取消      │
+    └─────┬──────┘  │ (名额回补)  │  │ (名额回补)   │
+          │         └────────────┘  └─────────────┘
+    ┌─────┴─────┐
+    │           │
+  通过        驳回
+    ↓           ↓
+┌─────────┐ ┌──────────┐
+│APPROVED │ │ REJECTED │
+│ 已通过   │ │  已驳回   │
+└─────────┘ └────┬─────┘
+                 │ 允许重提且未超次数
+                 ↓
+            回到 PENDING
+</code></pre>
+<p><strong>状态流转约束</strong></p>
+<ul>
+<li>所有状态变更走统一的状态机服务，禁止业务代码直接 UPDATE status</li>
+<li>每次变更写入 <code>submission_status_log</code>（原状态、新状态、操作人、原因、时间）</li>
+<li>终态：<code>APPROVED</code>、<code>EXPIRED</code>、<code>CANCELLED</code>、<code>REJECTED</code>（不允许重提时）</li>
+<li>状态变更使用<strong>乐观锁</strong>（version 字段），防止并发覆盖</li>
+</ul>
+<h3 id="64">6.4 超时释放实现</h3>
+<p><strong>双重保障机制</strong></p>
+<ul>
+<li><strong>主机制</strong>：BullMQ 延迟任务。抢单成功时投递 <code>delay = 占位有效期</code> 的任务，到期时检查该报单状态，若仍为 <code>CLAIMED</code> 则置为 <code>EXPIRED</code> 并回补 Redis 与数据库名额</li>
+<li><strong>兜底机制</strong>：定时任务每分钟扫描 <code>status='CLAIMED' AND expire_at &lt; NOW()</code> 的记录批量处理，捕获延迟队列丢失的漏网记录</li>
+<li><strong>释放动作原子性</strong>：先用乐观锁更新数据库状态（<code>WHERE status='CLAIMED'</code>），更新成功（影响行数=1）才回补 Redis，避免重复回补</li>
+</ul>
+<hr />
+<h2 id="_8">七、推荐关系设计</h2>
+<h3 id="71">7.1 数据模型选型</h3>
+<p>树形结构常见方案对比：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>查询整棵子树</th>
+<th>查询祖先链</th>
+<th>迁移节点</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>邻接表（仅 parent_id）</td>
+<td>递归，慢</td>
+<td>递归，慢</td>
+<td>极快</td>
+<td>❌ 查询性能差</td>
+</tr>
+<tr>
+<td>闭包表</td>
+<td>快</td>
+<td>快</td>
+<td>需重建大量行</td>
+<td>⚠️ 存储膨胀</td>
+</tr>
+<tr>
+<td><strong>物化路径（推荐）</strong></td>
+<td><strong>快（前缀 LIKE）</strong></td>
+<td><strong>快（解析 path）</strong></td>
+<td><strong>中等（前缀替换）</strong></td>
+<td>✅ <strong>采用</strong></td>
+</tr>
+<tr>
+<td>嵌套集</td>
+<td>极快</td>
+<td>快</td>
+<td>极慢</td>
+<td>❌ 频繁调整不适用</td>
+</tr>
+</tbody>
+</table>
+<p><strong>结论：采用物化路径（Materialized Path），同时保留 <code>parent_id</code> 字段便于直接查询直推。</strong></p>
+<pre><code>会员 A (id=1)   path = &quot;/1/&quot;          depth = 0
+├─ 会员 B (id=5) path = &quot;/1/5/&quot;       depth = 1
+│   ├─ 会员 D (id=9)  path = &quot;/1/5/9/&quot;  depth = 2
+│   └─ 会员 E (id=12) path = &quot;/1/5/12/&quot; depth = 2
+└─ 会员 C (id=7) path = &quot;/1/7/&quot;       depth = 1
+</code></pre>
+<p><strong>典型查询</strong></p>
+<pre><code class="language-sql">-- 查询 B 的整个团队（所有层级下级）
+SELECT * FROM members WHERE path LIKE '/1/5/%' AND id &lt;&gt; 5;
+
+-- 查询 B 的直推
+SELECT * FROM members WHERE parent_id = 5;
+
+-- 查询 D 的所有上级链
+SELECT * FROM members WHERE id IN (1, 5);  -- 由 path 解析得出
+
+-- 统计 B 的团队今日报单数
+SELECT COUNT(*) FROM submissions s
+JOIN members m ON s.member_id = m.id
+WHERE m.path LIKE '/1/5/%' AND s.created_at::date = CURRENT_DATE;
+</code></pre>
+<h3 id="72">7.2 环路检测</h3>
+<p>在任何关系变更前必须检测环路，否则会导致 path 计算无限递归。</p>
+<pre><code>校验规则：新上级 C 不能是被调整会员 B 的后代
+判定方法：检查 C.path 是否以 B.path 为前缀
+  若 C.path LIKE B.path || '%' 则形成环路，拒绝操作
+</code></pre>
+<p>批量导入时需构建完整的有向图，用<strong>拓扑排序或 DFS 着色法</strong>全量检测环路，任何一条形成环路即整批拒绝并给出明确定位。</p>
+<h3 id="73">7.3 关系变更的影响评估</h3>
+<p>调整关系前，系统需向管理员展示影响面：</p>
+<pre><code>┌────────────────────────────────────────┐
+│  关系调整确认                            │
+├────────────────────────────────────────┤
+│  会员：zhangsan@mail.com                │
+│  原上级：old_leader@mail.com            │
+│  新上级：new_leader@mail.com            │
+│                                        │
+│  ⚠ 本次调整将影响：                      │
+│    · 该会员及其 23 名下级的归属关系       │
+│    · old_leader 团队人数：156 → 132     │
+│    · new_leader 团队人数：89 → 113      │
+│    · 涉及历史报单 1,847 条的归属统计      │
+│                                        │
+│  调整原因（必填）：                       │
+│  [________________________________]     │
+│                                        │
+│         [ 取消 ]      [ 确认调整 ]       │
+└────────────────────────────────────────┘
+</code></pre>
+<p><strong>历史数据处理策略</strong>：报单表中冗余存储提交当时的 <code>parent_id_snapshot</code> 和 <code>path_snapshot</code>。这样关系调整<strong>不会篡改历史业绩归属</strong>，同时支持按"当前关系"和"历史关系"两种口径出报表。这一点必须在开发前与业务方确认口径。</p>
+<hr />
+<h2 id="_9">八、数据库设计</h2>
+<h3 id="81-er">8.1 ER 关系概览</h3>
+<pre><code>members (会员)
+   │ 1
+   ├──&lt; submissions (报单)  &gt;── task_instances (任务场次) ──&gt; task_templates (任务模板)
+   │                                                              │
+   ├──&lt; referral_change_log (关系变更日志)                          └──&lt; template_versions
+   ├──&lt; member_login_log
+   └──&lt; risk_alerts
+
+submissions
+   ├──&lt; submission_files (附件/图片)
+   ├──&lt; submission_status_log (状态流转日志)
+   └──&lt; reviews (审核记录)
+
+admin_users &gt;── admin_roles &gt;── admin_permissions
+export_records / system_configs / announcements / operation_logs
+</code></pre>
+<h3 id="82-postgresql">8.2 核心表结构（PostgreSQL）</h3>
+<pre><code class="language-sql">-- ============ 会员表 ============
+CREATE TABLE members (
+  id                BIGSERIAL PRIMARY KEY,
+  galaxy_email      VARCHAR(128) NOT NULL,              -- 星际未来邮箱
+  mall_phone        VARCHAR(20)  NOT NULL,              -- 商城手机号
+  password_hash     VARCHAR(100) NOT NULL,              -- bcrypt
+  nickname          VARCHAR(50),
+  real_name         VARCHAR(50),
+  avatar_url        VARCHAR(500),
+
+  parent_id         BIGINT REFERENCES members(id),      -- 直接上级
+  path              VARCHAR(1000) NOT NULL DEFAULT '',  -- 物化路径 /1/5/9/
+  depth             INT NOT NULL DEFAULT 0,
+  referral_source   VARCHAR(20) DEFAULT 'NONE',         -- SELF_INPUT/IMPORT/MANUAL/NONE
+  direct_count      INT NOT NULL DEFAULT 0,             -- 直推数（冗余）
+  team_count        INT NOT NULL DEFAULT 0,             -- 团队总数（冗余）
+
+  status            VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- PENDING/ACTIVE/DISABLED/BLACKLIST
+  is_team_leader    BOOLEAN NOT NULL DEFAULT FALSE,
+  register_ip       VARCHAR(64),
+  last_login_at     TIMESTAMPTZ,
+  last_login_ip     VARCHAR(64),
+  device_fingerprint VARCHAR(128),
+
+  total_submit      INT NOT NULL DEFAULT 0,
+  total_approved    INT NOT NULL DEFAULT 0,
+  total_rejected    INT NOT NULL DEFAULT 0,
+
+  remark            TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  deleted_at        TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX uk_members_email ON members(LOWER(galaxy_email)) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX uk_members_phone ON members(mall_phone) WHERE deleted_at IS NULL;
+CREATE INDEX idx_members_parent  ON members(parent_id);
+CREATE INDEX idx_members_path    ON members(path varchar_pattern_ops);
+CREATE INDEX idx_members_status  ON members(status);
+CREATE INDEX idx_members_created ON members(created_at DESC);
+
+
+-- ============ 任务模板 ============
+CREATE TABLE task_templates (
+  id                BIGSERIAL PRIMARY KEY,
+  code              VARCHAR(64) UNIQUE NOT NULL,
+  name              VARCHAR(200) NOT NULL,
+  category          VARCHAR(50),
+  cover_url         VARCHAR(500),
+  description       TEXT,                               -- 富文本任务说明
+  notice            TEXT,                               -- 注意事项
+  current_version   INT NOT NULL DEFAULT 1,
+  need_review       BOOLEAN NOT NULL DEFAULT TRUE,
+  allow_resubmit    BOOLEAN NOT NULL DEFAULT TRUE,
+  max_resubmit      INT NOT NULL DEFAULT 2,
+  sort_weight       INT NOT NULL DEFAULT 0,
+  status            VARCHAR(20) NOT NULL DEFAULT 'DRAFT', -- DRAFT/ENABLED/DISABLED
+  created_by        BIGINT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============ 模板版本（表单 Schema） ============
+CREATE TABLE template_versions (
+  id                BIGSERIAL PRIMARY KEY,
+  template_id       BIGINT NOT NULL REFERENCES task_templates(id),
+  version           INT NOT NULL,
+  form_schema       JSONB NOT NULL,                     -- 完整表单定义
+  extract_fields    JSONB,                              -- 需抽取的关键字段
+  changelog         TEXT,
+  published_by      BIGINT,
+  published_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(template_id, version)
+);
+
+-- ============ 任务场次 ============
+CREATE TABLE task_instances (
+  id                BIGSERIAL PRIMARY KEY,
+  template_id       BIGINT NOT NULL REFERENCES task_templates(id),
+  template_version  INT NOT NULL,
+  task_date         DATE NOT NULL,
+  start_at          TIMESTAMPTZ NOT NULL,
+  end_at            TIMESTAMPTZ NOT NULL,
+
+  total_quota       INT NOT NULL,                       -- 总名额
+  used_quota        INT NOT NULL DEFAULT 0,             -- 已占用（DB 权威值）
+  per_user_limit    INT NOT NULL DEFAULT 1,             -- 单人上限
+  hold_minutes      INT NOT NULL DEFAULT 60,            -- 占位有效期
+  allow_cancel      BOOLEAN NOT NULL DEFAULT TRUE,
+
+  visible_scope     VARCHAR(20) DEFAULT 'ALL',          -- ALL/TEAM/WHITELIST
+  visible_config    JSONB,
+  unit_price        NUMERIC(12,2) DEFAULT 0,
+
+  status            VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- PENDING/RUNNING/PAUSED/ENDED
+  remark            TEXT,
+  created_by        BIGINT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  version           INT NOT NULL DEFAULT 0               -- 乐观锁
+);
+
+CREATE INDEX idx_instances_date   ON task_instances(task_date DESC);
+CREATE INDEX idx_instances_status ON task_instances(status, start_at);
+CREATE UNIQUE INDEX uk_instance_tpl_date ON task_instances(template_id, task_date);
+
+
+-- ============ 报单（核心表） ============
+CREATE TABLE submissions (
+  id                BIGSERIAL PRIMARY KEY,
+  sn                VARCHAR(32) UNIQUE NOT NULL,        -- 业务单号 TRS20260810000001
+  instance_id       BIGINT NOT NULL REFERENCES task_instances(id),
+  template_id       BIGINT NOT NULL,
+  template_version  INT NOT NULL,
+  member_id         BIGINT NOT NULL REFERENCES members(id),
+  claim_seq         INT NOT NULL DEFAULT 1,             -- 同场次第几次抢单
+
+  -- 关系快照（保证历史业绩归属不被后续调整篡改）
+  parent_id_snapshot BIGINT,
+  path_snapshot      VARCHAR(1000),
+
+  status            VARCHAR(20) NOT NULL,               -- CLAIMED/PENDING/APPROVED/REJECTED/EXPIRED/CANCELLED
+  form_data         JSONB,                              -- 动态表单数据
+  extract_order_no  VARCHAR(64),                        -- 抽取：订单号
+  extract_amount    NUMERIC(12,2),                      -- 抽取：金额
+
+  claimed_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expire_at         TIMESTAMPTZ NOT NULL,               -- 提交截止时间
+  submitted_at      TIMESTAMPTZ,
+  reviewed_at       TIMESTAMPTZ,
+  reviewer_id       BIGINT,
+  reject_reason     VARCHAR(500),
+  reject_code       VARCHAR(50),
+  resubmit_count    INT NOT NULL DEFAULT 0,
+
+  risk_level        VARCHAR(20) DEFAULT 'NORMAL',       -- NORMAL/SUSPECT/HIGH
+  risk_tags         JSONB,
+  submit_ip         VARCHAR(64),
+  device_fingerprint VARCHAR(128),
+
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  version           INT NOT NULL DEFAULT 0
+);
+
+CREATE UNIQUE INDEX uk_sub_instance_member_seq ON submissions(instance_id, member_id, claim_seq);
+CREATE UNIQUE INDEX uk_sub_order_no ON submissions(extract_order_no)
+  WHERE extract_order_no IS NOT NULL AND status &lt;&gt; 'CANCELLED';
+CREATE INDEX idx_sub_status_created ON submissions(status, created_at DESC);
+CREATE INDEX idx_sub_member         ON submissions(member_id, created_at DESC);
+CREATE INDEX idx_sub_instance       ON submissions(instance_id, status);
+CREATE INDEX idx_sub_expire         ON submissions(expire_at) WHERE status = 'CLAIMED';
+CREATE INDEX idx_sub_path_snapshot  ON submissions(path_snapshot varchar_pattern_ops);
+CREATE INDEX idx_sub_reviewed       ON submissions(reviewed_at DESC) WHERE status IN ('APPROVED','REJECTED');
+
+
+-- ============ 报单附件 ============
+CREATE TABLE submission_files (
+  id                BIGSERIAL PRIMARY KEY,
+  submission_id     BIGINT NOT NULL REFERENCES submissions(id),
+  field_key         VARCHAR(64) NOT NULL,               -- 对应表单字段
+  file_url          VARCHAR(500) NOT NULL,
+  thumb_url         VARCHAR(500),
+  file_name         VARCHAR(200),
+  file_size         INT,
+  mime_type         VARCHAR(50),
+  md5_hash          VARCHAR(64),                        -- 精确查重
+  phash             VARCHAR(64),                        -- 感知哈希，相似图查重
+  sort_order        INT DEFAULT 0,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_files_submission ON submission_files(submission_id);
+CREATE INDEX idx_files_md5        ON submission_files(md5_hash);
+CREATE INDEX idx_files_phash      ON submission_files(phash);
+
+
+-- ============ 状态流转日志 ============
+CREATE TABLE submission_status_log (
+  id                BIGSERIAL PRIMARY KEY,
+  submission_id     BIGINT NOT NULL,
+  from_status       VARCHAR(20),
+  to_status         VARCHAR(20) NOT NULL,
+  operator_type     VARCHAR(20),                        -- MEMBER/ADMIN/SYSTEM
+  operator_id       BIGINT,
+  reason            VARCHAR(500),
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_status_log_sub ON submission_status_log(submission_id, created_at);
+
+
+-- ============ 推荐关系变更日志 ============
+CREATE TABLE referral_change_log (
+  id                BIGSERIAL PRIMARY KEY,
+  member_id         BIGINT NOT NULL,
+  old_parent_id     BIGINT,
+  new_parent_id     BIGINT,
+  old_path          VARCHAR(1000),
+  new_path          VARCHAR(1000),
+  affected_count    INT DEFAULT 0,                      -- 受影响的下级数量
+  change_type       VARCHAR(20),                        -- MANUAL/IMPORT/REGISTER
+  reason            VARCHAR(500),
+  operator_id       BIGINT,
+  batch_id          VARCHAR(64),                        -- 批量导入批次号
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_referral_log_member ON referral_change_log(member_id, created_at DESC);
+
+
+-- ============ 风控告警 ============
+CREATE TABLE risk_alerts (
+  id                BIGSERIAL PRIMARY KEY,
+  rule_code         VARCHAR(50) NOT NULL,
+  risk_level        VARCHAR(20) NOT NULL,
+  member_id         BIGINT,
+  submission_id     BIGINT,
+  detail            JSONB,
+  handle_status     VARCHAR(20) DEFAULT 'PENDING',      -- PENDING/CONFIRMED/FALSE_POSITIVE
+  handler_id        BIGINT,
+  handled_at        TIMESTAMPTZ,
+  handle_remark     VARCHAR(500),
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_risk_status ON risk_alerts(handle_status, created_at DESC);
+
+
+-- ============ 导出记录 ============
+CREATE TABLE export_records (
+  id                BIGSERIAL PRIMARY KEY,
+  export_type       VARCHAR(50),
+  template_code     VARCHAR(50),
+  filter_params     JSONB,
+  row_count         INT,
+  file_url          VARCHAR(500),
+  file_size         BIGINT,
+  status            VARCHAR(20) DEFAULT 'PROCESSING',   -- PROCESSING/SUCCESS/FAILED
+  error_msg         TEXT,
+  operator_id       BIGINT,
+  expire_at         TIMESTAMPTZ,                        -- 文件保留期
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
+-- ============ 后台操作日志 ============
+CREATE TABLE operation_logs (
+  id                BIGSERIAL PRIMARY KEY,
+  operator_id       BIGINT,
+  operator_name     VARCHAR(50),
+  module            VARCHAR(50),
+  action            VARCHAR(50),
+  target_type       VARCHAR(50),
+  target_id         VARCHAR(64),
+  before_data       JSONB,
+  after_data        JSONB,
+  ip                VARCHAR(64),
+  user_agent        VARCHAR(500),
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_oplog_operator ON operation_logs(operator_id, created_at DESC);
+CREATE INDEX idx_oplog_module   ON operation_logs(module, created_at DESC);
+</code></pre>
+<h3 id="83">8.3 索引与性能要点</h3>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>优化手段</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>订单号防重</td>
+<td>唯一部分索引（排除已取消记录）</td>
+</tr>
+<tr>
+<td>团队查询</td>
+<td><code>path</code> 使用 <code>varchar_pattern_ops</code>，前缀 LIKE 走索引</td>
+</tr>
+<tr>
+<td>超时扫描</td>
+<td>部分索引 <code>WHERE status='CLAIMED'</code>，仅索引待处理数据</td>
+</tr>
+<tr>
+<td>审核列表</td>
+<td>复合索引 <code>(status, created_at DESC)</code></td>
+</tr>
+<tr>
+<td>大数据量导出</td>
+<td>游标分页（Keyset Pagination），避免深度 OFFSET</td>
+</tr>
+<tr>
+<td>历史数据</td>
+<td>报单表按月分区（数据量超 500 万后启用）</td>
+</tr>
+<tr>
+<td>统计报表</td>
+<td>每日凌晨物化视图刷新，避免实时聚合</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_10">九、接口设计</h2>
+<h3 id="91">9.1 通用规范</h3>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>约定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>协议</td>
+<td>HTTPS Only</td>
+</tr>
+<tr>
+<td>风格</td>
+<td>RESTful</td>
+</tr>
+<tr>
+<td>前缀</td>
+<td>会员端 <code>/api/v1/</code>　后台 <code>/api/admin/v1/</code></td>
+</tr>
+<tr>
+<td>认证</td>
+<td><code>Authorization: Bearer {JWT}</code></td>
+</tr>
+<tr>
+<td>内容类型</td>
+<td><code>application/json</code>（文件走对象存储直传）</td>
+</tr>
+<tr>
+<td>时间格式</td>
+<td>ISO 8601，统一 UTC+8</td>
+</tr>
+<tr>
+<td>金额</td>
+<td>字符串传输，避免浮点精度问题</td>
+</tr>
+<tr>
+<td>分页</td>
+<td><code>page</code> / <code>pageSize</code>，大数据量用 <code>cursor</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>统一响应结构</strong></p>
+<pre><code class="language-json">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;success&quot;,
+  &quot;data&quot;: { },
+  &quot;traceId&quot;: &quot;a1b2c3d4e5f6&quot;,
+  &quot;timestamp&quot;: 1786464000000
+}
+</code></pre>
+<p><strong>错误码规范</strong></p>
+<table>
+<thead>
+<tr>
+<th>区间</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>成功</td>
+</tr>
+<tr>
+<td>1000-1999</td>
+<td>参数与校验错误</td>
+</tr>
+<tr>
+<td>2000-2999</td>
+<td>认证与权限错误</td>
+</tr>
+<tr>
+<td>3000-3999</td>
+<td>业务规则错误（名额不足、超限等）</td>
+</tr>
+<tr>
+<td>4000-4999</td>
+<td>风控拦截</td>
+</tr>
+<tr>
+<td>5000-5999</td>
+<td>系统内部错误</td>
+</tr>
+</tbody>
+</table>
+<h3 id="92">9.2 会员端接口清单</h3>
+<table>
+<thead>
+<tr>
+<th>分类</th>
+<th>方法</th>
+<th>路径</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>认证</td>
+<td>POST</td>
+<td><code>/auth/register</code></td>
+<td>注册</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>POST</td>
+<td><code>/auth/login</code></td>
+<td>登录</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>POST</td>
+<td><code>/auth/refresh</code></td>
+<td>刷新 Token</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>POST</td>
+<td><code>/auth/logout</code></td>
+<td>退出</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>GET</td>
+<td><code>/auth/check-email</code></td>
+<td>邮箱查重</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>GET</td>
+<td><code>/auth/check-phone</code></td>
+<td>手机号查重</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>POST</td>
+<td><code>/auth/sms-code</code></td>
+<td>发送短信验证码</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>POST</td>
+<td><code>/auth/reset-password</code></td>
+<td>重置密码</td>
+</tr>
+<tr>
+<td>任务</td>
+<td>GET</td>
+<td><code>/tasks</code></td>
+<td>任务大厅列表</td>
+</tr>
+<tr>
+<td>任务</td>
+<td>GET</td>
+<td><code>/tasks/{instanceId}</code></td>
+<td>任务详情（含表单 Schema）</td>
+</tr>
+<tr>
+<td>任务</td>
+<td>GET</td>
+<td><code>/tasks/{instanceId}/quota</code></td>
+<td>实时剩余名额（轮询用，轻量）</td>
+</tr>
+<tr>
+<td>抢单</td>
+<td>POST</td>
+<td><code>/tasks/{instanceId}/claim</code></td>
+<td>抢名额</td>
+</tr>
+<tr>
+<td>抢单</td>
+<td>POST</td>
+<td><code>/submissions/{id}/cancel</code></td>
+<td>放弃名额</td>
+</tr>
+<tr>
+<td>报单</td>
+<td>POST</td>
+<td><code>/submissions/{id}/submit</code></td>
+<td>提交任务表单</td>
+</tr>
+<tr>
+<td>报单</td>
+<td>PUT</td>
+<td><code>/submissions/{id}/draft</code></td>
+<td>保存草稿</td>
+</tr>
+<tr>
+<td>报单</td>
+<td>POST</td>
+<td><code>/submissions/{id}/resubmit</code></td>
+<td>驳回后重新提交</td>
+</tr>
+<tr>
+<td>报单</td>
+<td>GET</td>
+<td><code>/submissions</code></td>
+<td>我的报单列表</td>
+</tr>
+<tr>
+<td>报单</td>
+<td>GET</td>
+<td><code>/submissions/{id}</code></td>
+<td>报单详情</td>
+</tr>
+<tr>
+<td>上传</td>
+<td>POST</td>
+<td><code>/upload/token</code></td>
+<td>获取对象存储直传凭证</td>
+</tr>
+<tr>
+<td>上传</td>
+<td>POST</td>
+<td><code>/upload/callback</code></td>
+<td>上传完成回调（记录 MD5/pHash）</td>
+</tr>
+<tr>
+<td>团队</td>
+<td>GET</td>
+<td><code>/team/stats</code></td>
+<td>团队概览统计</td>
+</tr>
+<tr>
+<td>团队</td>
+<td>GET</td>
+<td><code>/team/members</code></td>
+<td>下级列表（分层）</td>
+</tr>
+<tr>
+<td>团队</td>
+<td>GET</td>
+<td><code>/team/submissions</code></td>
+<td>团队报单（团队长）</td>
+</tr>
+<tr>
+<td>消息</td>
+<td>GET</td>
+<td><code>/messages</code></td>
+<td>消息列表</td>
+</tr>
+<tr>
+<td>消息</td>
+<td>PUT</td>
+<td><code>/messages/read</code></td>
+<td>标记已读</td>
+</tr>
+<tr>
+<td>个人</td>
+<td>GET</td>
+<td><code>/profile</code></td>
+<td>个人信息</td>
+</tr>
+<tr>
+<td>个人</td>
+<td>PUT</td>
+<td><code>/profile</code></td>
+<td>修改昵称/头像</td>
+</tr>
+<tr>
+<td>个人</td>
+<td>PUT</td>
+<td><code>/profile/password</code></td>
+<td>修改密码</td>
+</tr>
+<tr>
+<td>公共</td>
+<td>GET</td>
+<td><code>/common/announcements</code></td>
+<td>公告列表</td>
+</tr>
+<tr>
+<td>公共</td>
+<td>GET</td>
+<td><code>/common/server-time</code></td>
+<td>服务器时间（倒计时校准）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="93">9.3 关键接口示例</h3>
+<p><strong>抢名额</strong></p>
+<pre><code class="language-http">POST /api/v1/tasks/1024/claim
+Authorization: Bearer eyJhbGc...
+Content-Type: application/json
+
+{
+  &quot;idempotencyToken&quot;: &quot;550e8400-e29b-41d4-a716-446655440000&quot;,
+  &quot;deviceFingerprint&quot;: &quot;fp_a1b2c3d4&quot;
+}
+</code></pre>
+<p>成功响应：</p>
+<pre><code class="language-json">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;抢单成功&quot;,
+  &quot;data&quot;: {
+    &quot;submissionId&quot;: 88213,
+    &quot;sn&quot;: &quot;TRS20260810000213&quot;,
+    &quot;status&quot;: &quot;CLAIMED&quot;,
+    &quot;claimedAt&quot;: &quot;2026-08-10T14:23:11+08:00&quot;,
+    &quot;expireAt&quot;: &quot;2026-08-10T15:23:11+08:00&quot;,
+    &quot;holdMinutes&quot;: 60,
+    &quot;remainQuota&quot;: 31,
+    &quot;serverTime&quot;: &quot;2026-08-10T14:23:11+08:00&quot;
+  }
+}
+</code></pre>
+<p>失败响应：</p>
+<pre><code class="language-json">{
+  &quot;code&quot;: 3001,
+  &quot;message&quot;: &quot;手慢了，名额已被抢完&quot;,
+  &quot;data&quot;: { &quot;remainQuota&quot;: 0 }
+}
+</code></pre>
+<p><strong>提交任务表单</strong></p>
+<pre><code class="language-http">POST /api/v1/submissions/88213/submit
+Content-Type: application/json
+
+{
+  &quot;formData&quot;: {
+    &quot;order_no&quot;: &quot;202608101234567890123&quot;,
+    &quot;amount&quot;: &quot;128.00&quot;,
+    &quot;order_time&quot;: &quot;2026-08-10T14:35:00+08:00&quot;,
+    &quot;order_screenshot&quot;: [
+      &quot;https://cdn.example.com/trs/2026/08/10/a1b2c3.jpg&quot;
+    ],
+    &quot;pay_screenshot&quot;: [
+      &quot;https://cdn.example.com/trs/2026/08/10/d4e5f6.jpg&quot;
+    ],
+    &quot;remark&quot;: &quot;已按要求完成&quot;
+  },
+  &quot;deviceFingerprint&quot;: &quot;fp_a1b2c3d4&quot;
+}
+</code></pre>
+<p>风控拦截响应：</p>
+<pre><code class="language-json">{
+  &quot;code&quot;: 4002,
+  &quot;message&quot;: &quot;该订单号已被提交过，请勿重复报单&quot;,
+  &quot;data&quot;: {
+    &quot;conflictSn&quot;: &quot;TRS20260810000108&quot;,
+    &quot;conflictDate&quot;: &quot;2026-08-10&quot;
+  }
+}
+</code></pre>
+<h3 id="94">9.4 后台接口清单（摘要）</h3>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>主要接口</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>认证</td>
+<td><code>POST /admin/auth/login</code>、<code>GET /admin/auth/profile</code></td>
+</tr>
+<tr>
+<td>看板</td>
+<td><code>GET /admin/dashboard/overview</code>、<code>GET /admin/dashboard/charts</code></td>
+</tr>
+<tr>
+<td>会员</td>
+<td><code>GET/PUT /admin/members</code>、<code>POST /admin/members/{id}/audit</code>、<code>POST /admin/members/{id}/disable</code></td>
+</tr>
+<tr>
+<td>关系</td>
+<td><code>GET /admin/referral/tree</code>、<code>PUT /admin/referral/{memberId}/parent</code>、<code>POST /admin/referral/import</code>、<code>POST /admin/referral/import/preview</code>、<code>GET /admin/referral/logs</code>、<code>GET /admin/referral/unassigned</code></td>
+</tr>
+<tr>
+<td>模板</td>
+<td><code>GET/POST/PUT /admin/templates</code>、<code>POST /admin/templates/{id}/publish</code>、<code>GET /admin/templates/{id}/versions</code></td>
+</tr>
+<tr>
+<td>场次</td>
+<td><code>GET/POST/PUT /admin/instances</code>、<code>POST /admin/instances/batch</code>、<code>PUT /admin/instances/{id}/quota</code>、<code>PUT /admin/instances/{id}/pause</code></td>
+</tr>
+<tr>
+<td>审核</td>
+<td><code>GET /admin/reviews/pending</code>、<code>POST /admin/reviews/{id}/lock</code>、<code>POST /admin/reviews/{id}/approve</code>、<code>POST /admin/reviews/{id}/reject</code>、<code>POST /admin/reviews/batch-approve</code></td>
+</tr>
+<tr>
+<td>导出</td>
+<td><code>POST /admin/export</code>、<code>GET /admin/export/records</code>、<code>POST /admin/export/reconcile</code>（反向对账）</td>
+</tr>
+<tr>
+<td>风控</td>
+<td><code>GET /admin/risk/alerts</code>、<code>PUT /admin/risk/alerts/{id}/handle</code>、<code>GET/PUT /admin/risk/rules</code></td>
+</tr>
+<tr>
+<td>系统</td>
+<td><code>GET/PUT /admin/configs</code>、<code>GET /admin/logs</code>、<code>CRUD /admin/users</code>、<code>CRUD /admin/roles</code>、<code>CRUD /admin/announcements</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_11">十、技术架构与选型</h2>
+<h3 id="101">10.1 技术选型</h3>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>选型</th>
+<th>选择理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>后端框架</td>
+<td><strong>NestJS (Node.js 20 + TypeScript)</strong></td>
+<td>与前端同语言，团队上手快；模块化架构清晰；生态成熟</td>
+</tr>
+<tr>
+<td>备选后端</td>
+<td>Spring Boot 3 (Java 17)</td>
+<td>若团队 Java 栈更强则选此，其余设计不变</td>
+</tr>
+<tr>
+<td>数据库</td>
+<td><strong>PostgreSQL 15</strong></td>
+<td>原生 JSONB 支持动态表单；部分索引；窗口函数强大</td>
+</tr>
+<tr>
+<td>缓存/队列</td>
+<td><strong>Redis 7</strong></td>
+<td>名额扣减、幂等、分布式锁、延迟队列</td>
+</tr>
+<tr>
+<td>任务队列</td>
+<td><strong>BullMQ</strong></td>
+<td>基于 Redis，支持延迟任务、重试、并发控制</td>
+</tr>
+<tr>
+<td>对象存储</td>
+<td><strong>腾讯云 COS / 阿里云 OSS</strong></td>
+<td>图片直传，节省带宽；配合 CDN 加速</td>
+</tr>
+<tr>
+<td>会员端</td>
+<td><strong>Vue 3 + Vite + Vant 4</strong></td>
+<td>移动端组件完善，包体小，H5 首屏快</td>
+</tr>
+<tr>
+<td>管理后台</td>
+<td><strong>Vue 3 + Element Plus</strong></td>
+<td>表格/表单组件强大，后台开发效率高</td>
+</tr>
+<tr>
+<td>表单渲染</td>
+<td>自研 Schema 渲染器</td>
+<td>完全贴合业务，避免第三方库限制</td>
+</tr>
+<tr>
+<td>表单设计器</td>
+<td>VueDraggable + 自研属性面板</td>
+<td>拖拽配置</td>
+</tr>
+<tr>
+<td>图表</td>
+<td>ECharts 5</td>
+<td>看板可视化</td>
+</tr>
+<tr>
+<td>Excel</td>
+<td>ExcelJS（Node）</td>
+<td>支持流式写入，大数据量导出不 OOM</td>
+</tr>
+<tr>
+<td>图片查重</td>
+<td>sharp + 自研 pHash</td>
+<td>感知哈希，识别裁剪/压缩后的相似图</td>
+</tr>
+<tr>
+<td>部署</td>
+<td>Docker + Docker Compose / K8s</td>
+<td>环境一致，易扩缩容</td>
+</tr>
+<tr>
+<td>网关</td>
+<td>Nginx</td>
+<td>反代、限流、静态资源、SSL</td>
+</tr>
+<tr>
+<td>监控</td>
+<td>Prometheus + Grafana + Sentry</td>
+<td>指标、告警、异常追踪</td>
+</tr>
+<tr>
+<td>日志</td>
+<td>Winston + ELK（可选）</td>
+<td>结构化日志</td>
+</tr>
+</tbody>
+</table>
+<h3 id="102">10.2 系统架构图</h3>
+<pre><code>                        ┌─────────────┐
+                        │   会员 H5    │
+                        └──────┬──────┘
+                        ┌──────┴──────┐
+                        │  管理后台 PC │
+                        └──────┬──────┘
+                               │ HTTPS
+                    ┌──────────┴──────────┐
+                    │    Nginx 网关        │
+                    │  SSL / 限流 / 静态资源│
+                    └──────────┬──────────┘
+                               │
+        ┌──────────────────────┼──────────────────────┐
+        │                      │                      │
+┌───────┴────────┐   ┌─────────┴────────┐   ┌─────────┴────────┐
+│  应用服务 #1     │   │   应用服务 #2     │   │  定时任务/队列消费  │
+│  NestJS         │   │   NestJS         │   │  BullMQ Worker   │
+│  · 认证         │   │   · 审核         │   │  · 超时释放       │
+│  · 抢单         │   │   · 导出         │   │  · 名额校准       │
+│  · 提交         │   │   · 风控         │   │  · 异步导出       │
+└───────┬────────┘   └─────────┬────────┘   │  · 图片查重       │
+        │                      │            │  · 场次自动开关    │
+        └──────────┬───────────┴────────────┴──────────────────┘
+                   │
+      ┌────────────┼────────────┬──────────────┐
+      │            │            │              │
+┌─────┴─────┐ ┌────┴────┐ ┌─────┴──────┐ ┌─────┴──────┐
+│PostgreSQL │ │  Redis  │ │对象存储 COS │ │  短信/邮件  │
+│主从       │ │ 集群     │ │  + CDN     │ │  第三方服务 │
+└───────────┘ └─────────┘ └────────────┘ └────────────┘
+</code></pre>
+<h3 id="103">10.3 部署方案</h3>
+<table>
+<thead>
+<tr>
+<th>环境</th>
+<th>用途</th>
+<th>配置建议</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>开发环境</td>
+<td>本地开发</td>
+<td>Docker Compose 一键起全套依赖</td>
+</tr>
+<tr>
+<td>测试环境</td>
+<td>联调与测试</td>
+<td>2 核 4G × 1，数据库共用</td>
+</tr>
+<tr>
+<td>预发环境</td>
+<td>上线前验证</td>
+<td>与生产同构，数据脱敏副本</td>
+</tr>
+<tr>
+<td>生产环境</td>
+<td>对外服务</td>
+<td>应用 4 核 8G × 2（负载均衡）；PG 4 核 8G 主 + 1 从；Redis 2 核 4G 主从</td>
+</tr>
+</tbody>
+</table>
+<p><strong>容量估算（5000 会员，日均 3000 报单）</strong></p>
+<table>
+<thead>
+<tr>
+<th>资源</th>
+<th>估算</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据库年增数据量</td>
+<td>报单约 110 万条，约 3-5 GB</td>
+</tr>
+<tr>
+<td>图片存储年增</td>
+<td>3000 单 × 3 图 × 500KB × 365 ≈ 1.6 TB</td>
+</tr>
+<tr>
+<td>峰值 QPS</td>
+<td>抢单瞬时约 500-1000 QPS</td>
+</tr>
+<tr>
+<td>带宽</td>
+<td>CDN 出流量峰值约 50 Mbps</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>图片存储成本是本项目最大的持续性开销</strong>，务必启用：前端压缩、WebP 转码、缩略图分离、冷数据转低频存储（90 天后）、超过保留期归档或删除（建议保留 1 年）。</p>
+</blockquote>
+<h3 id="104">10.4 文件上传方案</h3>
+<pre><code>前端选择图片
+   ↓
+前端压缩（canvas，长边 ≤1920，quality 0.8）
+   ↓
+计算文件 MD5（前端 SparkMD5 分片计算）
+   ↓
+请求后端：POST /upload/token { md5, fileName, size, fieldKey }
+   ↓
+后端校验：
+  · 文件大小、类型是否合规
+  · MD5 是否已存在（秒传：已存在则直接返回已有 URL；同时记录疑似重复）
+   ↓
+返回 COS 临时凭证（STS，5 分钟有效，限定路径前缀）
+   ↓
+前端直传 COS（带进度条，失败自动重试 3 次）
+   ↓
+上传成功后回调后端：POST /upload/callback
+   ↓
+后端异步任务：生成缩略图、计算 pHash、写入 submission_files
+</code></pre>
+<p><strong>存储路径规范</strong>：<code>trs/{yyyy}/{MM}/{dd}/{memberId}/{uuid}.{ext}</code></p>
+<p><strong>安全</strong>：COS 存储桶设为<strong>私有读</strong>，访问时由后端签发带时效的临时 URL（有效期 10 分钟），防止图片外链泄露与盗刷流量。</p>
+<h3 id="105">10.5 安全设计</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>措施</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>传输</td>
+<td>全站 HTTPS，HSTS，TLS 1.2+</td>
+</tr>
+<tr>
+<td>密码</td>
+<td>bcrypt(cost=10) 加盐哈希，禁止明文/MD5</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>JWT 双 Token；Refresh Token 存 Redis 可主动吊销</td>
+</tr>
+<tr>
+<td>越权</td>
+<td>所有资源访问校验归属（会员只能操作自己的报单）；后台接口逐个校验权限点</td>
+</tr>
+<tr>
+<td>注入</td>
+<td>全部使用参数化查询/ORM，禁止字符串拼接 SQL</td>
+</tr>
+<tr>
+<td>XSS</td>
+<td>富文本使用 DOMPurify 白名单过滤；输出转义</td>
+</tr>
+<tr>
+<td>CSRF</td>
+<td>JWT + 自定义 Header，不依赖 Cookie</td>
+</tr>
+<tr>
+<td>上传</td>
+<td>校验 MIME + 文件头魔数（不只看扩展名）；图片重编码剥离恶意载荷；禁止上传可执行文件</td>
+</tr>
+<tr>
+<td>限流</td>
+<td>按 IP + 用户维度限流；抢单接口单用户 1 秒 1 次；短信 60 秒 1 条、每日上限 10 条</td>
+</tr>
+<tr>
+<td>敏感数据</td>
+<td>手机号/邮箱在列表页脱敏展示；导出行为全量记录审计日志</td>
+</tr>
+<tr>
+<td>后台</td>
+<td>强制强密码 + 建议开启 TOTP 二次验证；可配置 IP 白名单</td>
+</tr>
+<tr>
+<td>防爆破</td>
+<td>登录失败 5 次锁定 30 分钟；图形验证码/滑块</td>
+</tr>
+<tr>
+<td>备份</td>
+<td>数据库每日全量 + 实时 WAL 归档，保留 30 天，每季度演练恢复</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_12">十一、非功能性需求</h2>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>指标</th>
+<th>要求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>性能</td>
+<td>普通接口 P95</td>
+<td>≤ 200ms</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>抢单接口 P99</td>
+<td>≤ 300ms</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>列表查询（万级）</td>
+<td>≤ 500ms</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>H5 首屏加载（4G）</td>
+<td>≤ 2s</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>图片上传（1MB）</td>
+<td>≤ 3s</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>导出（1 万条）</td>
+<td>≤ 30s</td>
+</tr>
+<tr>
+<td>并发</td>
+<td>抢单峰值</td>
+<td>支撑 1000 QPS 且零超发</td>
+</tr>
+<tr>
+<td>可用性</td>
+<td>服务可用率</td>
+<td>≥ 99.5%（月度）</td>
+</tr>
+<tr>
+<td>可靠性</td>
+<td>数据零丢失</td>
+<td>RPO ≤ 5 分钟，RTO ≤ 30 分钟</td>
+</tr>
+<tr>
+<td>兼容性</td>
+<td>移动端</td>
+<td>iOS 13+ Safari、Android 8+ Chrome、微信内置浏览器</td>
+</tr>
+<tr>
+<td>兼容性</td>
+<td>后台</td>
+<td>Chrome / Edge 最近两个大版本，最小分辨率 1366×768</td>
+</tr>
+<tr>
+<td>可维护性</td>
+<td>单元测试覆盖率</td>
+<td>核心业务模块 ≥ 70%</td>
+</tr>
+<tr>
+<td>可观测性</td>
+<td>日志</td>
+<td>结构化日志 + traceId 全链路串联</td>
+</tr>
+<tr>
+<td>可扩展性</td>
+<td>水平扩展</td>
+<td>应用无状态，可直接加机器</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_13">十二、风控与防作弊</h2>
+<h3 id="121">12.1 风险场景与对策</h3>
+<table>
+<thead>
+<tr>
+<th>风险场景</th>
+<th>危害</th>
+<th>对策</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>同一截图重复提交</td>
+<td>重复结算，资金损失</td>
+<td>MD5 精确查重 + pHash 相似查重，跨用户跨日期比对</td>
+</tr>
+<tr>
+<td>PS 伪造截图</td>
+<td>虚假报单</td>
+<td>人工审核 + 高清原图查看 + 图片 EXIF 检查 + 抽检机制</td>
+</tr>
+<tr>
+<td>一人注册多账号</td>
+<td>刷取名额</td>
+<td>邮箱唯一 + 手机号唯一 + 设备指纹 + IP 聚集告警</td>
+</tr>
+<tr>
+<td>脚本抢单</td>
+<td>破坏公平性</td>
+<td>抢单接口人机校验、限流、幂等、行为特征分析</td>
+</tr>
+<tr>
+<td>抢单不做单</td>
+<td>浪费名额</td>
+<td>占位有效期 + 超时释放 + 放弃次数惩罚</td>
+</tr>
+<tr>
+<td>订单号编造</td>
+<td>无法对账</td>
+<td>订单号格式校验 + 全局唯一 + 与商城对账清单反向核验</td>
+</tr>
+<tr>
+<td>内部人员舞弊</td>
+<td>违规放行</td>
+<td>审核操作全量留痕 + 审核员通过率异常监控 + 抽检复核</td>
+</tr>
+<tr>
+<td>数据导出泄露</td>
+<td>用户信息泄露</td>
+<td>导出权限最小化 + 导出记录审计 + 敏感字段脱敏可选</td>
+</tr>
+</tbody>
+</table>
+<h3 id="122">12.2 图片查重算法</h3>
+<pre><code>提交图片
+   ↓
+① MD5 精确匹配
+   在 submission_files 中查找相同 MD5
+   命中 ──&gt; 高危，直接拦截或强制人工复核
+   ↓ 未命中
+② 感知哈希 pHash（64 位）
+   计算流程：缩放 32×32 → 灰度化 → DCT 变换 → 取低频 8×8 → 均值二值化
+   ↓
+③ 汉明距离比对
+   与近 N 天（默认 30 天）同任务的图片比对
+   距离 ≤ 5  ──&gt; 高度相似，标记高危
+   距离 6-10 ──&gt; 疑似相似，标记待复核
+   距离 &gt; 10 ──&gt; 通过
+   ↓
+④ 命中则写入 risk_alerts，审核界面醒目提示并展示对比图
+</code></pre>
+<p><strong>性能优化</strong>：pHash 计算放入异步队列，不阻塞提交流程；比对范围通过任务 ID + 时间窗口收敛；数据量大时可引入 BK-Tree 或将哈希分段建索引加速。</p>
+<h3 id="123">12.3 业务合规提示</h3>
+<blockquote>
+<p>本节需业务负责人重点关注。</p>
+</blockquote>
+<p>系统本身是中性的任务管理工具，但<strong>任务内容的合规性决定了整个项目的法律风险</strong>。建议：</p>
+<ol>
+<li>确保任务为真实的商品体验、推广或内容创作行为，<strong>避免涉及虚假交易、刷单炒信</strong>——《反不正当竞争法》第八条明确禁止虚假交易，平台方与参与者均可能承担责任</li>
+<li>在会员注册协议与任务说明中明确任务规则、禁止行为与违规处理条款</li>
+<li>保留完整的任务发布记录、提交材料与审核记录，作为合规举证材料</li>
+<li>会员个人信息（邮箱、手机号）的收集需符合《个人信息保护法》：明示收集目的、取得同意、最小必要、保障安全</li>
+<li>建议上线前由法务对任务模式与用户协议出具意见</li>
+</ol>
+<hr />
+<h2 id="uiux">十三、UI/UX 设计要求</h2>
+<h3 id="131">13.1 页面清单</h3>
+<p><strong>会员端 H5（14 个页面）</strong></p>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>页面</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M01</td>
+<td>注册页</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>M02</td>
+<td>登录页</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>M03</td>
+<td>忘记密码</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>M04</td>
+<td>任务大厅（首页）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>M05</td>
+<td>任务详情</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>M06</td>
+<td>抢单结果页</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>M07</td>
+<td>任务提交（动态表单）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>M08</td>
+<td>提交成功页</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>M09</td>
+<td>我的报单列表</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>M10</td>
+<td>报单详情</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>M11</td>
+<td>我的团队</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>M12</td>
+<td>消息中心</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>M13</td>
+<td>个人中心</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>M14</td>
+<td>公告详情</td>
+<td>P2</td>
+</tr>
+</tbody>
+</table>
+<p><strong>管理后台（20 个页面）</strong></p>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>页面</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A01</td>
+<td>后台登录</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A02</td>
+<td>数据看板</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>A03</td>
+<td>会员列表</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A04</td>
+<td>会员详情</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A05</td>
+<td>注册审核</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A06</td>
+<td>推荐关系树</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A07</td>
+<td>关系调整</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A08</td>
+<td>关系批量导入</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A09</td>
+<td>关系变更日志</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>A10</td>
+<td>任务模板列表</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A11</td>
+<td>表单设计器</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A12</td>
+<td>场次列表</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A13</td>
+<td>场次发布/编辑</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A14</td>
+<td>审核工作台（列表）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A15</td>
+<td>逐条审核界面</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A16</td>
+<td>导出中心</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>A17</td>
+<td>导出记录</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>A18</td>
+<td>风控告警</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>A19</td>
+<td>系统设置</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>A20</td>
+<td>操作日志</td>
+<td>P2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="132">13.2 交互设计要点</h3>
+<p><strong>会员端</strong></p>
+<ul>
+<li>目标用户可能对手机操作不熟练，界面必须<strong>大字号、大按钮、少层级</strong></li>
+<li>关键操作（抢单、提交）按钮固定在屏幕底部，拇指易达</li>
+<li>状态用<strong>颜色 + 文字</strong>双重表达，不依赖颜色单一维度（考虑色弱用户）</li>
+<li>待提交 = 橙色｜待审核 = 蓝色｜已通过 = 绿色｜已驳回 = 红色｜已过期 = 灰色</li>
+<li>所有耗时操作必须有 loading 态与防重复点击</li>
+<li>错误提示必须<strong>明确告知原因和下一步怎么做</strong>，禁止"操作失败"这类无效文案</li>
+<li>倒计时全部基于服务器时间，页面重新激活（visibilitychange）时重新校准</li>
+<li>表单支持草稿保存，退出时二次确认</li>
+</ul>
+<p><strong>管理后台</strong></p>
+<ul>
+<li>审核工作台为<strong>高频重复操作</strong>场景，必须支持键盘快捷键与自动跳转下一条</li>
+<li>列表页筛选条件支持保存为"我的常用筛选"</li>
+<li>所有批量操作前显示影响条数并二次确认</li>
+<li>危险操作（删除、禁用、关系调整）二次确认且要求填写原因</li>
+<li>表格支持列显示配置、列宽拖拽、密度切换，并记忆用户偏好</li>
+</ul>
+<h3 id="133">13.3 视觉规范</h3>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>规范</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主色</td>
+<td>品牌色（待设计确认），辅助色遵循语义化</td>
+</tr>
+<tr>
+<td>字号</td>
+<td>H5 正文 14px，标题 16-18px，辅助 12px</td>
+</tr>
+<tr>
+<td>圆角</td>
+<td>卡片 8px，按钮 4px</td>
+</tr>
+<tr>
+<td>间距</td>
+<td>8px 基准栅格</td>
+</tr>
+<tr>
+<td>图标</td>
+<td>统一图标库（如 Iconify）</td>
+</tr>
+<tr>
+<td>空状态</td>
+<td>每个列表页配置插画 + 引导文案</td>
+</tr>
+<tr>
+<td>加载</td>
+<td>骨架屏优先于转圈</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_14">十四、项目排期与里程碑</h2>
+<h3 id="141-10">14.1 迭代规划（总周期 10 周）</h3>
+<p><strong>阶段零：需求确认与设计（第 1 周）</strong></p>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>需求评审与假设确认</td>
+<td>确认版需求文档</td>
+</tr>
+<tr>
+<td>原型设计</td>
+<td>Axure/Figma 原型（34 个页面）</td>
+</tr>
+<tr>
+<td>UI 视觉设计</td>
+<td>设计稿 + 组件规范</td>
+</tr>
+<tr>
+<td>数据库详细设计</td>
+<td>DDL 脚本</td>
+</tr>
+<tr>
+<td>接口文档</td>
+<td>OpenAPI 定义</td>
+</tr>
+<tr>
+<td>技术方案评审</td>
+<td>架构确认，环境就绪</td>
+</tr>
+</tbody>
+</table>
+<p><strong>阶段一：基础框架与账号体系（第 2-3 周）· MVP 起步</strong></p>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>负责</th>
+<th>工作量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>项目脚手架、CI/CD、环境搭建</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>数据库建表与迁移脚本</td>
+<td>后端</td>
+<td>2d</td>
+</tr>
+<tr>
+<td>会员注册（邮箱+手机号+密码）</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>登录、JWT、找回密码</td>
+<td>后端</td>
+<td>2d</td>
+</tr>
+<tr>
+<td>后台 RBAC 权限体系</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>会员管理 CRUD + 注册审核</td>
+<td>全栈</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>H5 注册/登录页</td>
+<td>前端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>后台框架 + 会员管理页</td>
+<td>前端</td>
+<td>4d</td>
+</tr>
+<tr>
+<td>文件上传（COS 直传）</td>
+<td>全栈</td>
+<td>3d</td>
+</tr>
+</tbody>
+</table>
+<p><strong>阶段二：推荐关系 + 任务配置（第 4-5 周）</strong></p>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>负责</th>
+<th>工作量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>推荐关系模型（物化路径）</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>关系调整 + 子树迁移 + 环路检测</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>Excel 批量导入 + 预览 + 差异比对</td>
+<td>后端</td>
+<td>4d</td>
+</tr>
+<tr>
+<td>关系树可视化组件</td>
+<td>前端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>关系管理页面</td>
+<td>前端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>任务模板 CRUD + 版本管理</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>动态表单 Schema 引擎（后端校验）</td>
+<td>后端</td>
+<td>4d</td>
+</tr>
+<tr>
+<td>表单设计器（拖拽配置）</td>
+<td>前端</td>
+<td>5d</td>
+</tr>
+<tr>
+<td>场次发布 + 批量生成</td>
+<td>全栈</td>
+<td>3d</td>
+</tr>
+</tbody>
+</table>
+<p><strong>阶段三：抢单与提交（第 6-7 周）· 核心攻坚</strong></p>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>负责</th>
+<th>工作量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>名额 Redis 方案 + Lua 脚本</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>抢单接口 + 幂等 + 限流</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>状态机服务</td>
+<td>后端</td>
+<td>2d</td>
+</tr>
+<tr>
+<td>超时释放（延迟队列 + 定时兜底）</td>
+<td>后端</td>
+<td>2d</td>
+</tr>
+<tr>
+<td>名额校准任务</td>
+<td>后端</td>
+<td>1d</td>
+</tr>
+<tr>
+<td>提交接口 + Schema 校验 + 唯一校验</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>任务大厅 H5</td>
+<td>前端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>动态表单渲染器 H5</td>
+<td>前端</td>
+<td>5d</td>
+</tr>
+<tr>
+<td>我的报单 + 详情</td>
+<td>前端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td><strong>压力测试与并发验证</strong></td>
+<td>测试</td>
+<td>3d</td>
+</tr>
+</tbody>
+</table>
+<p><strong>阶段四：审核 + 导出 + 风控（第 8-9 周）</strong></p>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>负责</th>
+<th>工作量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>审核工作台接口 + 分布式锁</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>批量审核 + 驳回重提</td>
+<td>后端</td>
+<td>2d</td>
+</tr>
+<tr>
+<td>审核界面（列表 + 逐条 + 快捷键）</td>
+<td>前端</td>
+<td>5d</td>
+</tr>
+<tr>
+<td>导出引擎（模板化 + 异步 + 流式）</td>
+<td>后端</td>
+<td>4d</td>
+</tr>
+<tr>
+<td>反向对账比对</td>
+<td>后端</td>
+<td>2d</td>
+</tr>
+<tr>
+<td>导出中心页面</td>
+<td>前端</td>
+<td>2d</td>
+</tr>
+<tr>
+<td>图片查重（MD5 + pHash）</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>风控规则引擎 + 告警</td>
+<td>后端</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>风控页面</td>
+<td>前端</td>
+<td>2d</td>
+</tr>
+<tr>
+<td>数据看板 + 图表</td>
+<td>全栈</td>
+<td>3d</td>
+</tr>
+<tr>
+<td>我的团队 H5</td>
+<td>前端</td>
+<td>2d</td>
+</tr>
+<tr>
+<td>消息通知</td>
+<td>全栈</td>
+<td>2d</td>
+</tr>
+</tbody>
+</table>
+<p><strong>阶段五：测试、优化与上线（第 10 周）</strong></p>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>系统联调与 Bug 修复</td>
+<td>缺陷清单清零（P0/P1）</td>
+</tr>
+<tr>
+<td>全量回归测试</td>
+<td>测试报告</td>
+</tr>
+<tr>
+<td>性能与压力测试</td>
+<td>性能报告</td>
+</tr>
+<tr>
+<td>安全测试（渗透、越权、注入）</td>
+<td>安全报告</td>
+</tr>
+<tr>
+<td>UAT 用户验收测试</td>
+<td>验收签字</td>
+</tr>
+<tr>
+<td>生产环境部署与数据初始化</td>
+<td>上线</td>
+</tr>
+<tr>
+<td>运营培训 + 操作手册</td>
+<td>培训完成</td>
+</tr>
+<tr>
+<td>灰度试运行</td>
+<td>小范围真实验证</td>
+</tr>
+</tbody>
+</table>
+<h3 id="142">14.2 里程碑</h3>
+<table>
+<thead>
+<tr>
+<th>里程碑</th>
+<th>时间点</th>
+<th>交付标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1 设计完成</td>
+<td>第 1 周末</td>
+<td>原型 + UI + 数据库 + 接口文档评审通过</td>
+</tr>
+<tr>
+<td>M2 账号体系可用</td>
+<td>第 3 周末</td>
+<td>可注册、可登录、后台可管理会员</td>
+</tr>
+<tr>
+<td>M3 任务可配置</td>
+<td>第 5 周末</td>
+<td>后台配置表单并发布场次，会员可见</td>
+</tr>
+<tr>
+<td>M4 <strong>MVP 闭环</strong></td>
+<td>第 7 周末</td>
+<td><strong>抢单→提交→查看进度全流程跑通</strong></td>
+</tr>
+<tr>
+<td>M5 全功能完成</td>
+<td>第 9 周末</td>
+<td>审核、导出、风控全部就绪</td>
+</tr>
+<tr>
+<td>M6 正式上线</td>
+<td>第 10 周末</td>
+<td>通过验收，生产环境稳定运行</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>若周期紧张，可将 M4（第 7 周末）作为 MVP 上线节点</strong>：先用简化审核（后台列表 + 通过/驳回按钮）+ 基础导出（固定模板）顶上，风控、看板、团队视图等延后到二期迭代。</p>
+</blockquote>
+<h3 id="143">14.3 人力配置</h3>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>人数</th>
+<th>投入周期</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>产品经理</td>
+<td>0.5</td>
+<td>全程</td>
+<td>需求、原型、验收</td>
+</tr>
+<tr>
+<td>UI 设计师</td>
+<td>0.5</td>
+<td>第 1-3 周</td>
+<td>视觉设计、切图</td>
+</tr>
+<tr>
+<td>后端工程师</td>
+<td>2</td>
+<td>全程</td>
+<td>1 人主攻并发与核心业务，1 人负责后台与导出</td>
+</tr>
+<tr>
+<td>前端工程师</td>
+<td>2</td>
+<td>第 2-10 周</td>
+<td>1 人 H5，1 人后台</td>
+</tr>
+<tr>
+<td>测试工程师</td>
+<td>1</td>
+<td>第 5-10 周</td>
+<td>用例设计、功能与性能测试</td>
+</tr>
+<tr>
+<td>运维</td>
+<td>0.2</td>
+<td>按需</td>
+<td>环境、部署、监控</td>
+</tr>
+</tbody>
+</table>
+<p><strong>总工作量估算：约 45-50 人周</strong></p>
+<h3 id="144">14.4 交付物清单</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>交付物</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文档</td>
+<td>需求规格说明书、UI 设计稿、数据库设计文档、接口文档（OpenAPI）、部署文档、运维手册、运营操作手册</td>
+</tr>
+<tr>
+<td>代码</td>
+<td>后端服务、会员端 H5、管理后台，含完整 Git 提交记录</td>
+</tr>
+<tr>
+<td>脚本</td>
+<td>数据库迁移脚本、初始化数据脚本、Docker 编排文件</td>
+</tr>
+<tr>
+<td>测试</td>
+<td>测试用例集、测试报告、性能压测报告、安全测试报告</td>
+</tr>
+<tr>
+<td>培训</td>
+<td>运营/审核人员培训（含录屏）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_15">十五、测试与验收</h2>
+<h3 id="151">15.1 测试策略</h3>
+<table>
+<thead>
+<tr>
+<th>测试类型</th>
+<th>范围</th>
+<th>负责人</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单元测试</td>
+<td>核心业务逻辑（名额扣减、状态机、路径计算、Schema 校验）</td>
+<td>开发</td>
+</tr>
+<tr>
+<td>接口测试</td>
+<td>全部 API，含异常分支与权限校验</td>
+<td>测试</td>
+</tr>
+<tr>
+<td>集成测试</td>
+<td>端到端业务流程</td>
+<td>测试</td>
+</tr>
+<tr>
+<td>并发测试</td>
+<td>抢单场景</td>
+<td>测试 + 开发</td>
+</tr>
+<tr>
+<td>性能测试</td>
+<td>列表查询、导出、图片上传</td>
+<td>测试</td>
+</tr>
+<tr>
+<td>安全测试</td>
+<td>越权、注入、XSS、上传漏洞、爆破</td>
+<td>测试</td>
+</tr>
+<tr>
+<td>兼容性测试</td>
+<td>主流机型与浏览器</td>
+<td>测试</td>
+</tr>
+<tr>
+<td>UAT</td>
+<td>真实运营与审核人员试用</td>
+<td>业务方</td>
+</tr>
+</tbody>
+</table>
+<h3 id="152">15.2 关键测试用例</h3>
+<p><strong>名额并发（最高优先级）</strong></p>
+<table>
+<thead>
+<tr>
+<th>用例</th>
+<th>预期结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100 名额，1000 人同时抢</td>
+<td>恰好 100 人成功，<code>used_quota = 100</code>，无超发</td>
+</tr>
+<tr>
+<td>同一用户快速点击 10 次（相同幂等 Token）</td>
+<td>仅占用 1 个名额，返回相同结果</td>
+</tr>
+<tr>
+<td>单人限额 2，用户尝试抢 5 次</td>
+<td>前 2 次成功，后 3 次返回 USER_LIMIT_EXCEEDED</td>
+</tr>
+<tr>
+<td>抢单后超时未提交</td>
+<td>到期自动 EXPIRED，名额回补，他人可抢</td>
+</tr>
+<tr>
+<td>抢单后主动放弃</td>
+<td>状态 CANCELLED，名额立即回补</td>
+</tr>
+<tr>
+<td>开始时间前 1 秒抢单</td>
+<td>返回 NOT_STARTED</td>
+</tr>
+<tr>
+<td>截止时间后 1 秒抢单</td>
+<td>返回 ALREADY_ENDED</td>
+</tr>
+<tr>
+<td>抢单过程中 Redis 宕机</td>
+<td>降级为数据库锁，仍不超发</td>
+</tr>
+<tr>
+<td>场次进行中追加名额</td>
+<td>新增名额立即可抢，Redis 同步更新</td>
+</tr>
+<tr>
+<td>长时间运行后校准</td>
+<td>Redis 计数与数据库 <code>used_quota</code> 一致</td>
+</tr>
+</tbody>
+</table>
+<p><strong>推荐关系</strong></p>
+<table>
+<thead>
+<tr>
+<th>用例</th>
+<th>预期结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>调整 B 的上级为其自身下级 D</td>
+<td>拒绝，提示会形成环路</td>
+</tr>
+<tr>
+<td>调整含 20 个下级的节点</td>
+<td>21 条记录 path/depth 全部正确更新</td>
+</tr>
+<tr>
+<td>导入含环路的 Excel</td>
+<td>整批拒绝并定位到具体行</td>
+</tr>
+<tr>
+<td>导入含未注册邮箱</td>
+<td>该行跳过，输出未注册名单</td>
+</tr>
+<tr>
+<td>关系调整后查历史报单</td>
+<td>历史归属按快照不变，当前归属按新关系</td>
+</tr>
+</tbody>
+</table>
+<p><strong>表单与提交</strong></p>
+<table>
+<thead>
+<tr>
+<th>用例</th>
+<th>预期结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>绕过前端直接调接口提交非法数据</td>
+<td>后端校验拦截</td>
+</tr>
+<tr>
+<td>提交已存在的订单号</td>
+<td>拦截并提示冲突单号</td>
+</tr>
+<tr>
+<td>提交完全相同的图片</td>
+<td>MD5 命中，标记高危并按配置拦截</td>
+</tr>
+<tr>
+<td>提交裁剪压缩后的相似图</td>
+<td>pHash 命中，标记疑似</td>
+</tr>
+<tr>
+<td>超过最大图片数量</td>
+<td>前后端均拦截</td>
+</tr>
+<tr>
+<td>模板改版后查看旧报单</td>
+<td>按旧版本 Schema 正确渲染</td>
+</tr>
+</tbody>
+</table>
+<p><strong>审核与导出</strong></p>
+<table>
+<thead>
+<tr>
+<th>用例</th>
+<th>预期结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>两名审核员同时打开同一条</td>
+<td>后者提示"正在被他人审核"</td>
+</tr>
+<tr>
+<td>批量通过 500 条</td>
+<td>全部成功，状态与日志正确</td>
+</tr>
+<tr>
+<td>驳回后会员重提</td>
+<td>状态回到 PENDING，重提次数 +1</td>
+</tr>
+<tr>
+<td>超过最大重提次数</td>
+<td>禁止再次提交</td>
+</tr>
+<tr>
+<td>导出 5 万条</td>
+<td>异步生成成功，文件完整，内存无溢出</td>
+</tr>
+<tr>
+<td>反向对账上传商城清单</td>
+<td>正确输出双向差异清单</td>
+</tr>
+</tbody>
+</table>
+<h3 id="153-dod">15.3 验收标准（DoD）</h3>
+<p><strong>功能验收</strong></p>
+<ul>
+<li>[ ] 全部 P0/P1 功能实现且通过测试</li>
+<li>[ ] P0 缺陷 0 个，P1 缺陷 0 个，P2 缺陷 ≤ 5 个且有处理计划</li>
+<li>[ ] 核心流程（注册→审核→抢单→提交→审核→导出）连续 3 次全通过</li>
+</ul>
+<p><strong>性能验收</strong></p>
+<ul>
+<li>[ ] 1000 并发抢单，零超发，P99 ≤ 300ms</li>
+<li>[ ] 万条数据导出 ≤ 30s</li>
+<li>[ ] H5 首屏 ≤ 2s（4G 环境）</li>
+</ul>
+<p><strong>安全验收</strong></p>
+<ul>
+<li>[ ] 无高危漏洞（越权、注入、任意文件上传）</li>
+<li>[ ] 密码加密存储，敏感数据脱敏</li>
+<li>[ ] 所有后台写操作有日志</li>
+</ul>
+<p><strong>交付验收</strong></p>
+<ul>
+<li>[ ] 文档齐全并通过评审</li>
+<li>[ ] 生产环境部署完成，监控告警配置就绪</li>
+<li>[ ] 运营与审核人员培训完成并能独立操作</li>
+<li>[ ] 数据备份与恢复演练成功</li>
+</ul>
+<hr />
+<h2 id="_16">十六、风险识别与应对</h2>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>风险</th>
+<th>等级</th>
+<th>影响</th>
+<th>应对措施</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1</td>
+<td><strong>抢单并发超发</strong></td>
+<td>🔴 高</td>
+<td>名额失控，直接资金损失</td>
+<td>Redis Lua + 数据库唯一索引双保险；上线前必做 1000 并发压测；准备降级方案</td>
+</tr>
+<tr>
+<td>R2</td>
+<td><strong>业务合规风险</strong></td>
+<td>🔴 高</td>
+<td>法律与平台风险</td>
+<td>上线前法务审查任务模式；完善用户协议；保留全量证据链</td>
+</tr>
+<tr>
+<td>R3</td>
+<td><strong>推荐关系初始化工作量大</strong></td>
+<td>🟠 中高</td>
+<td>上线延期</td>
+<td>优先做 Excel 批量导入；注册引导填写推荐人；分批处理</td>
+</tr>
+<tr>
+<td>R4</td>
+<td><strong>商城对账口径不一致</strong></td>
+<td>🟠 中高</td>
+<td>对账失败，返工</td>
+<td>项目启动第一周即与商城确认对账字段与格式；导出模板可配置</td>
+</tr>
+<tr>
+<td>R5</td>
+<td>图片存储成本超预期</td>
+<td>🟠 中</td>
+<td>运营成本上升</td>
+<td>前端压缩 + WebP + 缩略图 + 冷存储 + 定期清理策略</td>
+</tr>
+<tr>
+<td>R6</td>
+<td>表单设计器开发复杂度高</td>
+<td>🟠 中</td>
+<td>工期延误</td>
+<td>一期先支持核心 8 种字段类型；复杂字段二期迭代</td>
+</tr>
+<tr>
+<td>R7</td>
+<td>用户操作不熟练致报单错误</td>
+<td>🟡 中低</td>
+<td>审核成本上升</td>
+<td>表单加详细图示引导；提交前确认页；培训与图文教程</td>
+</tr>
+<tr>
+<td>R8</td>
+<td>审核人力不足积压</td>
+<td>🟡 中低</td>
+<td>审核延迟，投诉增加</td>
+<td>批量审核 + 快捷键 + 自动跳转；简单任务可配置免审；预留自动审核规则接口</td>
+</tr>
+<tr>
+<td>R9</td>
+<td>星际未来关系表格式不稳定</td>
+<td>🟡 中低</td>
+<td>导入失败</td>
+<td>导入模板做强校验与容错；支持字段映射配置</td>
+</tr>
+<tr>
+<td>R10</td>
+<td>第三方服务（短信/COS）故障</td>
+<td>🟡 中低</td>
+<td>部分功能不可用</td>
+<td>短信可关闭降级；COS 配置备用域名与重试</td>
+</tr>
+<tr>
+<td>R11</td>
+<td>需求变更频繁</td>
+<td>🟠 中</td>
+<td>工期与成本失控</td>
+<td>明确本期范围；变更走评估流程，超出范围排入二期</td>
+</tr>
+<tr>
+<td>R12</td>
+<td>关键人员流失</td>
+<td>🟡 低</td>
+<td>交付风险</td>
+<td>代码规范 + 文档完备 + 关键模块结对开发</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_17">十七、后续演进规划</h2>
+<h3 id="1-3">二期（上线后 1-3 个月）</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>价值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>与星际未来平台 API 打通</td>
+<td>推荐关系自动同步，彻底告别人工导入</td>
+</tr>
+<tr>
+<td>与商城 API 打通</td>
+<td>订单号自动核验，审核工作量下降 80%</td>
+</tr>
+<tr>
+<td>佣金结算模块</td>
+<td>自动计算个人佣金与团队分佣，支持提现申请</td>
+</tr>
+<tr>
+<td>自动审核规则引擎</td>
+<td>满足条件（订单号校验通过 + 图片无重复 + 金额匹配）自动放行，人工只审异常</td>
+</tr>
+<tr>
+<td>OCR 截图识别</td>
+<td>自动提取订单号与金额，与填写值比对，防篡改</td>
+</tr>
+<tr>
+<td>微信/企业微信通知</td>
+<td>任务开始、审核结果实时推送，提升到达率</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3-6">三期（上线后 3-6 个月）</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>价值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>会员等级与积分体系</td>
+<td>提升活跃度与留存</td>
+</tr>
+<tr>
+<td>任务智能推荐</td>
+<td>根据历史完成情况推送匹配任务</td>
+</tr>
+<tr>
+<td>数据分析中心</td>
+<td>团队健康度、会员生命周期、任务 ROI 分析</td>
+</tr>
+<tr>
+<td>移动端 App</td>
+<td>推送能力更强，体验更好</td>
+</tr>
+<tr>
+<td>多商城多平台支持</td>
+<td>支持接入更多任务来源渠道</td>
+</tr>
+<tr>
+<td>开放 API</td>
+<td>供上下游系统集成</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_18">十八、附录</h2>
+<h3 id="a">附录 A：状态码与枚举字典</h3>
+<p><strong>报单状态（submission.status）</strong></p>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>中文</th>
+<th>是否占用名额</th>
+<th>是否终态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CLAIMED</td>
+<td>已抢占</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>PENDING</td>
+<td>待审核</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>APPROVED</td>
+<td>已通过</td>
+<td>是</td>
+<td>是</td>
+</tr>
+<tr>
+<td>REJECTED</td>
+<td>已驳回</td>
+<td>视配置</td>
+<td>视配置</td>
+</tr>
+<tr>
+<td>EXPIRED</td>
+<td>已过期</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>CANCELLED</td>
+<td>已取消</td>
+<td>否</td>
+<td>是</td>
+</tr>
+</tbody>
+</table>
+<p><strong>会员状态（member.status）</strong></p>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>中文</th>
+<th>可登录</th>
+<th>可抢单</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PENDING</td>
+<td>待审核</td>
+<td>否</td>
+<td>否</td>
+</tr>
+<tr>
+<td>ACTIVE</td>
+<td>正常</td>
+<td>是</td>
+<td>是</td>
+</tr>
+<tr>
+<td>DISABLED</td>
+<td>已禁用</td>
+<td>否</td>
+<td>否</td>
+</tr>
+<tr>
+<td>BLACKLIST</td>
+<td>黑名单</td>
+<td>否</td>
+<td>否</td>
+</tr>
+</tbody>
+</table>
+<p><strong>场次状态（task_instance.status）</strong></p>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>中文</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PENDING</td>
+<td>未开始</td>
+<td>未到开始时间</td>
+</tr>
+<tr>
+<td>RUNNING</td>
+<td>进行中</td>
+<td>可抢单</td>
+</tr>
+<tr>
+<td>PAUSED</td>
+<td>已暂停</td>
+<td>不可新抢，已抢的可提交</td>
+</tr>
+<tr>
+<td>ENDED</td>
+<td>已结束</td>
+<td>完全关闭</td>
+</tr>
+</tbody>
+</table>
+<p><strong>驳回原因预设</strong></p>
+<table>
+<thead>
+<tr>
+<th>编码</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BLUR</td>
+<td>截图不清晰，无法辨认</td>
+</tr>
+<tr>
+<td>ORDER_MISMATCH</td>
+<td>订单号与截图不符</td>
+</tr>
+<tr>
+<td>AMOUNT_MISMATCH</td>
+<td>金额与截图不符</td>
+</tr>
+<tr>
+<td>WRONG_ACCOUNT</td>
+<td>非本人绑定的商城账号</td>
+</tr>
+<tr>
+<td>DUPLICATE</td>
+<td>重复提交</td>
+</tr>
+<tr>
+<td>ORDER_CANCELLED</td>
+<td>订单已取消或退款</td>
+</tr>
+<tr>
+<td>INCOMPLETE</td>
+<td>材料不完整</td>
+</tr>
+<tr>
+<td>NOT_MATCH_TASK</td>
+<td>与任务要求不符</td>
+</tr>
+<tr>
+<td>OTHER</td>
+<td>其他（需填写说明）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="b">附录 B：导出字段对照表</h3>
+<table>
+<thead>
+<tr>
+<th>导出列名</th>
+<th>数据来源</th>
+<th>格式</th>
+<th>商城模板</th>
+<th>内部模板</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>序号</td>
+<td>自增</td>
+<td>数字</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>报单编号</td>
+<td>submissions.sn</td>
+<td>文本</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>商城手机号</td>
+<td>members.mall_phone</td>
+<td>文本</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>星际未来邮箱</td>
+<td>members.galaxy_email</td>
+<td>文本</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>会员昵称</td>
+<td>members.nickname</td>
+<td>文本</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>上级邮箱</td>
+<td>关联查询</td>
+<td>文本</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>团队长</td>
+<td>路径解析</td>
+<td>文本</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>任务名称</td>
+<td>task_templates.name</td>
+<td>文本</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>任务日期</td>
+<td>task_instances.task_date</td>
+<td>YYYY-MM-DD</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>订单号</td>
+<td>extract_order_no</td>
+<td>文本（防科学计数）</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>订单金额</td>
+<td>extract_amount</td>
+<td>数字，2 位小数</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>提交时间</td>
+<td>submitted_at</td>
+<td>YYYY-MM-DD HH:mm:ss</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>审核状态</td>
+<td>status 映射中文</td>
+<td>文本</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>审核时间</td>
+<td>reviewed_at</td>
+<td>YYYY-MM-DD HH:mm:ss</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>审核员</td>
+<td>reviewer 关联</td>
+<td>文本</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>驳回原因</td>
+<td>reject_reason</td>
+<td>文本</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>截图链接</td>
+<td>submission_files</td>
+<td>URL（可点击）</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>单价</td>
+<td>task_instances.unit_price</td>
+<td>数字</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>应结金额</td>
+<td>计算</td>
+<td>数字</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>注意</strong>：订单号导出时必须设置为<strong>文本格式</strong>，否则 Excel 会将长数字转为科学计数法导致对账失败。</p>
+</blockquote>
+<h3 id="c">附录 C：待确认问题清单</h3>
+<p>以下问题需业务方在<strong>开发启动前</strong>给出明确答复，直接影响方案落地：</p>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>问题</th>
+<th>影响模块</th>
+<th>建议方案</th>
+<th>业务方确认结论（V1.1）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Q1</td>
+<td>一个星际未来邮箱是否只能绑定一个商城手机号？</td>
+<td>注册校验、防作弊</td>
+<td>建议一对一强绑定</td>
+<td>✅ <strong>一对一绑定</strong>（一个邮箱唯一对应一个手机号）</td>
+</tr>
+<tr>
+<td>Q2</td>
+<td>星际未来的推荐关系能否导出 Excel？字段有哪些？</td>
+<td>关系初始化</td>
+<td>需提供样例文件</td>
+<td>不依赖 Excel 导入；注册时用【邀请码】绑定上级，后台客服<strong>人工核对</strong>推荐关系是否一致。会员 ≤1000，人工核对可行</td>
+</tr>
+<tr>
+<td>Q3</td>
+<td>是否需要短信验证码验证手机号真实性？</td>
+<td>注册流程、成本</td>
+<td>建议开启（成本约 0.04 元/条）</td>
+<td>❌ <strong>不需要短信验证</strong>；真实性由人工审核保障</td>
+</tr>
+<tr>
+<td>Q4</td>
+<td>注册是否需要人工审核后才能使用？</td>
+<td>注册流程</td>
+<td>建议开启，防批量注册</td>
+<td>✅ <strong>需要人工审核通过后才能使用</strong></td>
+</tr>
+<tr>
+<td>Q5</td>
+<td>同一会员每天在同一任务下可抢几个名额？</td>
+<td>名额模型</td>
+<td>建议可配置，默认 1</td>
+<td>✅ 可配置，默认 1</td>
+</tr>
+<tr>
+<td>Q6</td>
+<td>抢单后多久内必须提交？</td>
+<td>占位机制</td>
+<td>建议 60 分钟</td>
+<td>✅ 抢单成功后须在<strong>当日 18:00 前</strong>提交（截止时间可配置，默认 18:00）</td>
+</tr>
+<tr>
+<td>Q7</td>
+<td>审核驳回后是否允许重新提交？最多几次？</td>
+<td>状态机</td>
+<td>建议允许，上限 2 次</td>
+<td>✅ 允许重新提交；<strong>驳回时向会员推送通知</strong>。重提次数可配置（默认不设上限，待确认）</td>
+</tr>
+<tr>
+<td>Q8</td>
+<td>商城对账需要哪些字段？有无固定模板？</td>
+<td>导出模块</td>
+<td>需提供商城方的对账样表</td>
+<td>导出字段 = <strong>商城手机号 + 任务详细数据</strong>（按模板动态取提交字段）</td>
+</tr>
+<tr>
+<td>Q9</td>
+<td>是否需要佣金计算与结算功能？</td>
+<td>本期范围</td>
+<td>建议二期，本期先记录单价</td>
+<td>❌ 本期<strong>不做结算/佣金</strong>；需统计【任务次数】；结算走人工</td>
+</tr>
+<tr>
+<td>Q10</td>
+<td>任务是否只有"商城下单"一种类型？</td>
+<td>表单设计</td>
+<td>影响字段类型优先级</td>
+<td>按<strong>多任务类型</strong>设计；字段类型支持优先级排序（由任务类型决定）</td>
+</tr>
+<tr>
+<td>Q11</td>
+<td>预计会员规模与日均报单量？</td>
+<td>容量规划</td>
+<td>影响服务器配置</td>
+<td>会员 ≤1000，日均 ≤1000 单 → 单机小规格（2C4G~4C8G）+ Docker 即可</td>
+</tr>
+<tr>
+<td>Q12</td>
+<td>图片需要保留多久？</td>
+<td>存储成本</td>
+<td>建议 1 年，之后归档</td>
+<td>✅ 保留 1 年，之后归档</td>
+</tr>
+<tr>
+<td>Q13</td>
+<td>审核人员有几位？日均可审核量？</td>
+<td>审核效率设计</td>
+<td>影响是否需要自动审核</td>
+<td>审核人员 <strong>2 位</strong>；保留快捷键 / 批量审核工作台</td>
+</tr>
+<tr>
+<td>Q14</td>
+<td>是否需要在微信内使用（需公众号/企业微信配置）？</td>
+<td>前端方案</td>
+<td>影响分享与推送能力</td>
+<td>❌ 不需要微信内使用；H5 浏览器即可；通知用站内信 / 邮件</td>
+</tr>
+<tr>
+<td>Q15</td>
+<td>关系调整后，历史业绩按新关系还是旧关系统计？</td>
+<td>数据快照策略</td>
+<td>建议历史按快照，避免争议</td>
+<td>✅ 关系调整后，历史业绩按<strong>新关系</strong>重算（不做快照隔离，覆盖原建议）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>合规声明（业务方确认）</strong>：本系统不做任何支付 / 交易，仅用于报单统计与团队协作，属中性工具。</p>
+</blockquote>
+<hr />
+<h3 id="c-1v112026-08-10">附录 C-1：需求确认纪要（V1.1，2026-08-10）</h3>
+<p>基于业务方对附录 C 的答复，以下决策<strong>覆盖</strong>原策划书中的"建议"口径，开发须按本纪要执行：</p>
+<ol>
+<li><strong>关系建立方式变更</strong>：由"导入星际未来 Excel"改为「注册填写邀请码绑定上级 + 后台客服人工核对」。不再依赖外部数据导出；关系调整通过后台人工指定上级，全程留痕（见 <code>RelationAdjustLog</code>）。</li>
+<li><strong>去除短信验证（Q3）+ 加入注册人工审核（Q4）</strong>：注册流程 = 填邮箱/手机号/密码/邀请码 → 状态 <code>PENDING</code> → 客服审核 → <code>ACTIVE</code> 方可登录使用。</li>
+<li><strong>去除佣金 / 结算模块（Q9），新增"任务次数统计"</strong>：本期仅记录"通过审核的任务次数"，结算完全走人工；导出与统计口径围绕"次数 + 提交明细"。</li>
+<li><strong>提交截止改为"当日 18:00"（Q6）</strong>：占位释放逻辑由"固定 60 分钟"改为"按任务截止时间（默认 18:00）计算"，到点未提交自动释放名额并通知。</li>
+<li><strong>历史业绩按新关系重算（Q15）</strong>：关系树调整后，团队业绩报表直接按当前树计算，<strong>不做提交时快照</strong>。报表口径以"当前关系"为准（业务方已确认接受追溯变动）。</li>
+<li><strong>不做微信内集成（Q14）</strong>：会员端为 H5 网页；驳回 / 审核结果通知走站内信 + 邮件。</li>
+<li><strong>容量降级（Q11）</strong>：会员 ≤1000、日单 ≤1000，原"千级并发抢单压测"仍保留原子扣减设计，但压测目标下调；单机 Docker 部署即可，不必上 K8s。</li>
+<li><strong>部署方式（对应"腾讯云服务器搭建"诉求）</strong>：采用容器化交付——本工作区完成开发自测后，产出 <code>docker-compose</code> 包（应用 + 独立 Postgres + 独立 Redis，<strong>各自占用不与现有程序冲突的端口</strong>）。在腾讯云服务器执行 <code>docker compose up -d</code> 即运行，与服务器上原有程序零耦合；回滚只需 <code>docker compose down</code>。<strong>注意：服务器密码等敏感凭证请勿在对话中直接发送</strong>，部署走容器化包交付最安全。</li>
+</ol>
+<hr />
+<hr />
+<h2 id="_19">文档修订记录</h2>
+<table>
+<thead>
+<tr>
+<th>版本</th>
+<th>日期</th>
+<th>修订人</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V1.0</td>
+<td>2026-08-10</td>
+<td>—</td>
+<td>初版，覆盖完整需求分析、系统设计与实施计划</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>本策划书为开发实施的依据性文件。附录 C 中的待确认问题需在开发启动前闭环，避免返工。方案中的技术选型可根据团队实际技术栈调整，但核心设计（名额并发控制、动态表单引擎、物化路径关系树、状态机、快照策略）建议保留。</em></p>
+  </main>
+</div>
+<div class="topbar">
+  <button onclick="doPrint()" title="打印 / 导出 PDF">🖨</button>
+  <button onclick="toTop()" title="回到顶部">↑</button>
+</div>
+<script>
+// 表格包裹容器，支持横向滚动
+document.querySelectorAll('.content table').forEach(function(t){
+  if(t.parentElement.classList.contains('tablewrap')) return;
+  var w=document.createElement('div'); w.className='tablewrap';
+  t.parentNode.insertBefore(w,t); w.appendChild(t);
+});
+// 目录高亮
+var links = Array.prototype.slice.call(document.querySelectorAll('.sidebar a'));
+var map = {};
+links.forEach(function(a){
+  var id = decodeURIComponent(a.getAttribute('href')||'').slice(1);
+  var el = document.getElementById(id);
+  if(el) map[id] = a;
+});
+var obs = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      links.forEach(function(l){ l.classList.remove('active'); });
+      var a = map[e.target.id];
+      if(a){ a.classList.add('active'); }
+    }
+  });
+}, { rootMargin: '0px 0px -75% 0px', threshold: 0 });
+Object.keys(map).forEach(function(id){ obs.observe(document.getElementById(id)); });
+// 按钮
+function toTop(){ window.scrollTo({top:0,behavior:'smooth'}); }
+function doPrint(){ window.print(); }
+</script>
+</body>
+</html>
