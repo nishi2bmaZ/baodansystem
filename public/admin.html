@@ -39,6 +39,16 @@
     .tphone { color:#888; font-size:12px; }
     .tstats { margin-left:auto; color:#07c160; font-size:12px; }
     .tchildren { margin-top:2px; }
+    /* 修改会员弹窗 */
+    .modal-mask { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; display:flex; align-items:flex-start; justify-content:center; padding:24px 12px; overflow:auto; }
+    .modal { background:#fff; width:100%; max-width:480px; border-radius:12px; overflow:hidden; }
+    .modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #ebedf0; font-size:16px; font-weight:600; }
+    .modal-head .close { font-size:22px; cursor:pointer; color:#888; line-height:1; }
+    .modal-body { padding:14px 16px; max-height:74vh; overflow:auto; }
+    .modal-sec { border:1px solid #ebedf0; border-radius:10px; padding:12px; margin-bottom:12px; }
+    .modal-sec .sec-title { font-size:15px; font-weight:600; margin-bottom:10px; color:#1f2d3d; }
+    .modal-sec .hint { font-size:12px; color:#888; margin:8px 0 0; }
+    .modal .cur-ref { font-size:13px; color:#555; margin-bottom:8px; padding:6px 8px; background:#f7f8fa; border-radius:6px; }
     @media (max-width:768px){
       .sidebar { transform:translateX(-100%); transition:transform .25s; width:190px; }
       .admin.sidebar-open .sidebar { transform:translateX(0); }
@@ -156,12 +166,13 @@ async function loadMembers(){
   try{ users = await api('GET','/admin/users?status='+encodeURIComponent(status)+'&q='+encodeURIComponent(q)); }catch(e){ toast(e.message); }
   const list = (users||[]).map(u=>`
     <div class="card">
-      <div class="title">${esc(u.email)} <span class="tag ${u.status==='ACTIVE'?'approved':u.status==='DISABLED'?'rejected':'pending'}">${USER_STATUS_CN[u.status]||u.status}</span></div>
+      <div class="title">${u.name?esc(u.name)+' ':''}${esc(u.email)} <span class="tag ${u.status==='ACTIVE'?'approved':u.status==='DISABLED'?'rejected':'pending'}">${USER_STATUS_CN[u.status]||u.status}</span>${u.level?`<span class="tag">${esc(u.level)}</span>`:''}</div>
       <div class="sub">手机：${esc(u.phone)} ｜ 上级：${esc(u.referrerEmail||'无')} ｜ 注册：${esc((u.createdAt||'').slice(0,10))}</div>
       <div class="row" style="margin-top:8px;gap:8px">
         ${u.status!=='ACTIVE' ? `<button class="btn sm" data-approve="${u.id}">通过</button>`:''}
         ${u.status==='ACTIVE' ? `<button class="btn sm danger" data-disable="${u.id}">禁用</button>`:''}
         ${u.status==='DISABLED' ? `<button class="btn sm" data-approve="${u.id}">启用</button>`:''}
+        <button class="btn sm ghost" data-edit="${u.id}">修改</button>
       </div>
     </div>`).join('');
   body.innerHTML = `
@@ -185,10 +196,118 @@ async function loadMembers(){
   const rb=body.querySelector('#mRefresh'); if(rb) rb.onclick=()=>loadMembers();
   body.querySelectorAll('[data-approve]').forEach(b=> b.onclick=()=>memberAction(b.dataset.approve,'approve'));
   body.querySelectorAll('[data-disable]').forEach(b=> b.onclick=()=>memberAction(b.dataset.disable,'disable'));
+  body.querySelectorAll('[data-edit]').forEach(b=> b.onclick=()=>openEditModal(b.dataset.edit));
 }
 async function memberAction(id, action){
   try{ await api('POST','/admin/users/'+id+'/review',{action}); toast(action==='approve'?'已通过/启用':'已禁用'); loadMembers(); }
   catch(e){ toast(e.message); }
+}
+
+/* ===================== 修改会员（资料 / 推荐关系 / 密码） ===================== */
+let EDIT = { id:null, user:null, newReferrerId:null };
+
+async function openEditModal(id){
+  let u;
+  try{ u = await api('GET','/admin/users/'+id); }catch(e){ toast(e.message); return; }
+  EDIT = { id, user:u, newReferrerId:null };
+  renderEditModal();
+}
+function renderEditModal(){
+  const u = EDIT.user;
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask';
+  mask.id = 'editMask';
+  mask.innerHTML = `
+    <div class="modal">
+      <div class="modal-head"><span>修改会员 · ${esc(u.email)}</span><span class="close" id="editClose">×</span></div>
+      <div class="modal-body">
+        <div class="modal-sec">
+          <div class="sec-title">① 基本资料</div>
+          <div class="field"><label>姓名</label><input type="text" id="eName" value="${esc(u.name||'')}" placeholder="选填"></div>
+          <div class="field"><label>手机号</label><input type="text" id="ePhone" value="${esc(u.phone||'')}"></div>
+          <div class="field"><label>等级</label>
+            <select id="eLevel">
+              ${['普通会员','银卡会员','金卡会员','钻石会员'].map(l=>`<option ${u.level===l?'selected':''}>${l}</option>`).join('')}
+            </select></div>
+          <button class="btn sm" id="eSaveProfile">保存资料</button>
+        </div>
+        <div class="modal-sec">
+          <div class="sec-title">② 推荐关系</div>
+          <div class="cur-ref" id="eCurRef">当前上级：${esc(u.referrerEmail||'无（顶层）')}${u.referrerId?(' (#'+u.referrerId+')'):''}</div>
+          <div class="field"><label>新上级（邮箱/手机号）</label>
+            <div class="row" style="gap:8px">
+              <input type="text" id="eRefQ" placeholder="输入关键字搜索">
+              <button class="btn sm ghost" id="eRefSearch">搜索</button>
+            </div>
+          </div>
+          <div id="eRefOut" class="mt8"></div>
+          <label style="font-size:13px;display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="eTop"> 设为顶层（无上级）</label>
+          <div class="hint">调整上级会联动重算整棵推荐树，并记录调整日志。</div>
+          <button class="btn sm" id="eSaveRef">保存关系调整</button>
+        </div>
+        <div class="modal-sec">
+          <div class="sec-title">③ 登录密码</div>
+          <div class="field"><label>新密码</label><input type="text" id="ePwd" placeholder="至少 6 位"></div>
+          <button class="btn sm" id="eSavePwd">重置密码</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(mask);
+  $('#editClose').onclick = closeEditModal;
+  mask.onclick = (e)=>{ if(e.target===mask) closeEditModal(); };
+  $('#eSaveProfile').onclick = saveProfile;
+  $('#eSavePwd').onclick = savePassword;
+  $('#eRefSearch').onclick = searchReferrer;
+  $('#eSaveRef').onclick = saveReferrer;
+  $('#eTop').onchange = ()=>{ if($('#eTop').checked){ EDIT.newReferrerId=null; $('#eRefOut').innerHTML=''; } };
+}
+function closeEditModal(){
+  const m=document.getElementById('editMask'); if(m) m.remove();
+}
+async function saveProfile(){
+  const name=$('#eName').value.trim(), phone=$('#ePhone').value.trim(), level=$('#eLevel').value;
+  if(!phone){ toast('手机号不能为空'); return; }
+  try{ await api('POST','/admin/users/'+EDIT.id,{name,phone,level}); toast('资料已更新'); loadMembers(); }
+  catch(e){ toast(e.message); }
+}
+async function savePassword(){
+  const password=$('#ePwd').value;
+  if(!password||password.length<6){ toast('密码至少 6 位'); return; }
+  try{ await api('POST','/admin/users/'+EDIT.id+'/password',{password}); toast('密码已重置'); $('#ePwd').value=''; }
+  catch(e){ toast(e.message); }
+}
+async function searchReferrer(){
+  const q=$('#eRefQ').value.trim();
+  if(!q){ toast('请输入关键字'); return; }
+  let d;
+  try{ d=await api('GET','/admin/relation/search?q='+encodeURIComponent(q)); }catch(e){ toast(e.message); return; }
+  const rs=(d.results||[]).filter(r=> r.id !== Number(EDIT.id));
+  if(!rs.length){ $('#eRefOut').innerHTML='<div class="muted" style="font-size:13px">未找到匹配账号</div>'; return; }
+  $('#eRefOut').innerHTML = rs.map(r=>`
+    <div class="cur-ref" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+      <span>${esc(r.email)} ｜ ${esc(r.phone)}</span>
+      <button class="btn sm ghost" data-pick="${r.id}">选择</button>
+    </div>`).join('');
+  $('#eRefOut').querySelectorAll('[data-pick]').forEach(b=> b.onclick=()=>{
+    EDIT.newReferrerId=+b.dataset.pick;
+    $('#eTop').checked=false;
+    $('#eRefOut').querySelectorAll('[data-pick]').forEach(x=> x.textContent='选择');
+    b.textContent='已选 ✓';
+    toast('已选择上级 #'+b.dataset.pick);
+  });
+}
+async function saveReferrer(){
+  const top=$('#eTop').checked;
+  if(!top && (EDIT.newReferrerId==null)){ toast('请搜索并选择新上级，或勾选设为顶层'); return; }
+  try{
+    const body = { userId:Number(EDIT.id), reason:'后台修改会员' };
+    if(!top) body.newReferrerId = EDIT.newReferrerId; // 设为顶层时不带该字段，后端置为无上级
+    await api('POST','/admin/relation/adjust', body);
+    toast('推荐关系已调整');
+    EDIT.user = await api('GET','/admin/users/'+EDIT.id);
+    $('#eCurRef').textContent = '当前上级：'+ (EDIT.user.referrerEmail||'无（顶层）') + (EDIT.user.referrerId?(' (#'+EDIT.user.referrerId+')'):'');
+    loadMembers();
+  }catch(e){ toast(e.message); }
 }
 
 /* ===================== 模板配置 ===================== */

@@ -125,6 +125,8 @@ export class AuthService {
       id: u.id,
       email: u.email,
       phone: u.phone,
+      name: u.name,
+      level: u.level,
       status: u.status,
       inviteCode: u.inviteCode,
       path: u.path,
@@ -153,5 +155,54 @@ export class AuthService {
       data: { status: 'ACTIVE', reviewedAt: new Date(), reviewedById: operatorId },
     });
     return { id: updated.id, status: updated.status, message: '审核通过，账号已激活' };
+  }
+
+  /** 后台：获取单个会员详情（含上级信息），用于修改弹窗预填 */
+  async getUser(id: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { referrer: { select: { id: true, email: true, phone: true } } },
+    });
+    if (!user) throw new NotFoundException('用户不存在');
+    return {
+      id: user.id,
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      level: user.level,
+      status: user.status,
+      referrerId: user.referrerId,
+      referrerEmail: user.referrer ? user.referrer.email : null,
+      path: user.path,
+      depth: user.depth,
+      createdAt: user.createdAt,
+    };
+  }
+
+  /** 后台：修改会员基本资料（姓名 / 手机号 / 等级），与禁用逻辑相互独立 */
+  async updateProfile(id: number, dto: { name?: string; phone?: string; level?: string }) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('用户不存在');
+    const data: any = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.level !== undefined) data.level = dto.level;
+    if (dto.phone !== undefined && dto.phone !== user.phone) {
+      const exist = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
+      if (exist) throw new ConflictException('该商城手机号已注册');
+      data.phone = dto.phone;
+    } else if (dto.phone !== undefined) {
+      data.phone = dto.phone;
+    }
+    const updated = await this.prisma.user.update({ where: { id }, data });
+    return { id: updated.id, message: '会员资料已更新' };
+  }
+
+  /** 后台：重置会员登录密码 */
+  async updatePassword(id: number, password: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('用户不存在');
+    const passwordHash = await bcrypt.hash(password, 10);
+    await this.prisma.user.update({ where: { id }, data: { passwordHash } });
+    return { id, message: '登录密码已重置' };
   }
 }

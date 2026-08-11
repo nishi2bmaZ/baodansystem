@@ -13,6 +13,8 @@ import {
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller()
@@ -59,5 +61,34 @@ export class AuthController {
     if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
     const action = body && body.action === 'disable' ? 'disable' : 'approve';
     return this.auth.review(parseInt(id, 10), action);
+  }
+
+  /** 后台：获取单个会员详情（修改弹窗预填） */
+  @Get('admin/users/:id')
+  getUser(@Param('id') id: string, @Headers('x-admin-key') key: string) {
+    if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
+    return this.auth.getUser(parseInt(id, 10));
+  }
+
+  /** 后台：修改会员基本资料（姓名/手机号/等级），权限与禁用按钮相互独立 */
+  @Post('admin/users/:id')
+  updateProfile(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @Headers('x-admin-key') key: string,
+  ) {
+    if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
+    return this.auth.updateProfile(parseInt(id, 10), dto);
+  }
+
+  /** 后台：重置会员登录密码 */
+  @Post('admin/users/:id/password')
+  resetPassword(
+    @Param('id') id: string,
+    @Body() dto: ChangePasswordDto,
+    @Headers('x-admin-key') key: string,
+  ) {
+    if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
+    return this.auth.updatePassword(parseInt(id, 10), dto.password);
   }
 }

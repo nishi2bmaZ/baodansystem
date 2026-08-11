@@ -36,6 +36,8 @@ model User {
   id           Int        @id @default(autoincrement())
   email        String     @unique // 星际未来邮箱，唯一
   phone        String     @unique // 商城手机号，唯一（一对一绑定）
+  name         String?    // 会员姓名（资料字段，可空）
+  level        String     @default("普通会员") // 会员等级
   passwordHash String
   status       UserStatus @default(PENDING)
   inviteCode   String?   // 注册所用邀请码
