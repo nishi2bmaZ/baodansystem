@@ -20,6 +20,9 @@ services:
       - redis
     networks:
       - baodan_net
+    volumes:
+      - ./uploads:/app/uploads
+      - ./exports:/app/exports
     restart: unless-stopped
 
   db:

@@ -1,12 +1,8 @@
 // 团队任务报单系统 数据模型（Prisma + PostgreSQL）
-// 已对齐需求确认纪要 V1.1：
-//  - 邮箱/手机号 一对一唯一（Q1）
-//  - 邀请码绑定上级 + 人工审核（Q2/Q4）
-//  - 单会员每日名额可配，默认1（Q5）
-//  - 提交截止默认 18:00（Q6）
-//  - 驳回可重提 + 通知（Q7）
-//  - 不做结算，仅统计任务次数（Q9）
-//  - 关系调整按新关系重算（Q15）
+// 动态任务表单引擎 V2：
+//  - 表单模板 TaskTemplate（schemaJson 存字段定义，支持 文本/数字/图片/下拉/日期/勾选）
+//  - 任务实例 TaskInstance（按模板发布，带总槽位数 quota）
+//  - 提交 Submission（一人可抢多个槽、提交多条；不再限制一人一实例一条）
 
 generator client {
   provider = "prisma-client-js"
@@ -67,54 +63,45 @@ model InviteCode {
 }
 
 model TaskTemplate {
-  id           Int        @id @default(autoincrement())
-  name         String
-  schemaJson   String     // 动态表单 Schema（JSON 文本）
-  version      Int        @default(1)
-  perUserDaily Int        @default(1)   // 单会员每日名额（Q5，默认1）
-  submitDeadline String   @default("18:00") // 提交截止时间（Q6，默认18:00）
-  dailyQuota   Int        // 每日总名额
-  startTime    String     // 每日开始时间，如 09:00
-  endTime      String     // 每日结束时间
-  status       TaskStatus  @default(DRAFT)
-  createdById  Int
-  instances    TaskInstance[]
+  id          Int           @id @default(autoincrement())
+  name        String
+  schemaJson  String        // 动态表单字段定义（JSON 文本）
+  status      TaskStatus    @default(DRAFT)
+  createdById Int
+  createdAt   DateTime      @default(now())
+  instances   TaskInstance[]
 }
 
 model TaskInstance {
-  id        Int         @id @default(autoincrement())
+  id         Int           @id @default(autoincrement())
   templateId Int
-  template  TaskTemplate @relation(fields: [templateId], references: [id])
-  date      DateTime    @db.Date
-  quota     Int
-  grabbed   Int         @default(0)
-  startTime DateTime
-  endTime   DateTime
-  status    String      @default("OPEN")
+  template   TaskTemplate  @relation(fields: [templateId], references: [id])
+  title      String
+  date       DateTime      @db.Date
+  quota      Int           // 总槽位数
+  grabbed    Int           @default(0) // 已抢数
+  startTime  DateTime
+  endTime    DateTime
+  status     String        @default("OPEN") // OPEN / CLOSED
+  createdAt  DateTime      @default(now())
   submissions Submission[]
-
-  @@unique([templateId, date])
 }
 
 model Submission {
-  id             Int             @id @default(autoincrement())
+  id             Int              @id @default(autoincrement())
   instanceId     Int
-  instance       TaskInstance    @relation(fields: [instanceId], references: [id])
+  instance       TaskInstance     @relation(fields: [instanceId], references: [id])
   userId         Int
-  user           User            @relation(fields: [userId], references: [id])
-  data           String          // 提交数据 JSON
-  images         String?         // 图片 URL 列表 JSON
+  user           User             @relation(fields: [userId], references: [id])
+  data           String           // 字段值 JSON
+  images         String?          // 图片 URL 数组 JSON
   status         SubmissionStatus @default(GRABBED)
-  submitDeadline DateTime?       // 计算出的当日 18:00
+  submitDeadline DateTime?        // 截止时间（取任务 endTime）
   submittedAt    DateTime?
   reviewedById   Int?
   reviewedAt     DateTime?
   rejectReason   String?
-  notifiedAt     DateTime?       // 驳回/结果通知发送时间（Q7）
-  taskCount      Int?            // 统计用：本次计入的任务次数（Q9）
-  createdAt      DateTime        @default(now())
-
-  @@unique([instanceId, userId]) // 同一场次同一人仅一条（配合抢单原子性）
+  createdAt      DateTime         @default(now())
 }
 
 model RelationAdjustLog {
@@ -131,7 +118,7 @@ model RelationAdjustLog {
 
 model ExportRecord {
   id         Int      @id @default(autoincrement())
-  taskId     Int
+  instanceId Int
   date       DateTime @db.Date
   filePath   String
   rowCount   Int
