@@ -26,6 +26,9 @@ const TYPE_CN = { text:'文本', number:'数字', image:'图片', dropdown:'下�
 let A = { view:'login', tab:'templates', templates:[], instances:[], subs:[], curInstanceId:null,
           newFields:[{key:'',label:'',type:'text',required:false,options:''}] };
 
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+
 function getAK(){ return localStorage.getItem(AK_KEY); }
 function setAK(k){ localStorage.setItem(AK_KEY, k); }
 function clearAK(){ localStorage.removeItem(AK_KEY); }
