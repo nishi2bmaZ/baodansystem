@@ -168,7 +168,7 @@ async function loadMembers(){
     <div class="card">
       <div class="title">${u.name?esc(u.name)+' ':''}${esc(u.email)} <span class="tag ${u.status==='ACTIVE'?'approved':u.status==='DISABLED'?'rejected':'pending'}">${USER_STATUS_CN[u.status]||u.status}</span>${u.level?`<span class="tag">${esc(u.level)}</span>`:''}</div>
       <div class="sub">手机：${esc(u.phone)} ｜ 上级：${esc(u.referrerEmail||'无')} ｜ 注册：${esc((u.createdAt||'').slice(0,10))}</div>
-      <div class="row" style="margin-top:8px;gap:8px">
+      <div class="m-actions">
         ${u.status!=='ACTIVE' ? `<button class="btn sm" data-approve="${u.id}">通过</button>`:''}
         ${u.status==='ACTIVE' ? `<button class="btn sm danger" data-disable="${u.id}">禁用</button>`:''}
         ${u.status==='DISABLED' ? `<button class="btn sm" data-approve="${u.id}">启用</button>`:''}
