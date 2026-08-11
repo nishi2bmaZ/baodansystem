@@ -67,6 +67,13 @@ export class RelationController {
     return this.relation.adjustReferrer(dto);
   }
 
+  /** 后台：根据现有 referrerId 重建所有人的 path/depth（数据修复用） */
+  @Post('admin/relation/rebuild-paths')
+  rebuildPaths(@Headers('x-admin-key') key: string) {
+    if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
+    return this.relation.rebuildPaths();
+  }
+
   /** 后台：查看某用户的推荐关系调整历史 */
   @Get('admin/relation/log/:userId')
   getLog(@Param('userId') userId: string, @Headers('x-admin-key') key: string) {

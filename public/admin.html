@@ -489,11 +489,22 @@ async function loadRelation(){
       <div id="relInfo" class="rel-info" style="display:none"></div>
       <div id="relSearchOut" class="mt12"></div>
     </div>
-    <div class="title" style="font-size:15px;margin:8px 0 4px">团队关系树（从顶层第一个账号开始，点击 ▸ 逐层展开下级）</div>
+    <div class="title" style="display:flex;justify-content:space-between;align-items:center;font-size:15px;margin:8px 0 4px">
+      团队关系树（从顶层第一个账号开始，点击 ▸ 逐层展开下级）
+      <div class="m-actions" style="margin-top:0;flex-wrap:nowrap">
+        <button class="btn sm" id="relRebuildBtn">重建路径</button>
+        <button class="btn sm ghost" id="relRefreshBtn">刷新</button>
+      </div>
+    </div>
     <div id="treeRoot" class="mt12"><div class="card center muted">加载中…</div></div>`;
   body.querySelector('#relSearchBtn').onclick = doRelSearch;
   body.querySelector('#relSearch').addEventListener('keydown', e=>{ if(e.key==='Enter') doRelSearch(); });
   const rb=body.querySelector('#relRefreshBtn'); if(rb) rb.onclick=()=>loadRoots();
+  const reb=body.querySelector('#relRebuildBtn'); if(reb) reb.onclick=async()=>{
+    if(!confirm('确定根据当前 referrerId 重建所有人的 path/depth？')) return;
+    try{ await api('POST','/admin/relation/rebuild-paths'); toast('路径已重建'); loadRoots(); }
+    catch(e){ toast(e.message); }
+  };
   await loadRoots();
 }
 

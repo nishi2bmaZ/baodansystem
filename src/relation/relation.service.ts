@@ -92,9 +92,10 @@ export class RelationService {
     const newDepth = newParent ? newParent.depth + 1 : 0;
     const delta = newDepth - user.depth;
 
-    // 受影响子树（不含自己）：path 以旧 path 开头的所有下级
+    // 受影响子树（不含自己）：path 必须以「旧 path + 自己 id + /」开头，
+    // 避免 oldPath 前缀刚好与别人相同时把兄弟/上级误判为子树。
     const descendants = await this.prisma.user.findMany({
-      where: { path: { startsWith: oldPath } },
+      where: { path: { startsWith: oldPath + user.id + '/' } },
       select: { id: true, path: true, depth: true },
     });
     const subs = descendants.filter((d) => d.id !== user.id);
@@ -242,6 +243,55 @@ export class RelationService {
       });
     }
     return { results };
+  }
+
+  /**
+   * 根据现有 referrerId 关系，重新计算并写回所有人的 path/depth。
+   * 用于修复因历史 bug 或人工调整导致 path/depth 与 referrerId 不一致的脏数据。
+   */
+  async rebuildPaths() {
+    const users = await this.prisma.user.findMany({
+      select: { id: true, referrerId: true, email: true },
+    });
+    const userMap = new Map<number, any>();
+    users.forEach((u) => userMap.set(u.id, u));
+
+    // 按 referrerId 建立子节点映射
+    const childrenMap = new Map<number, number[]>();
+    for (const u of users) {
+      if (u.referrerId != null) {
+        if (!childrenMap.has(u.referrerId)) childrenMap.set(u.referrerId, []);
+        childrenMap.get(u.referrerId).push(u.id);
+      }
+    }
+
+    const updates: { id: number; path: string; depth: number }[] = [];
+    const queue: { id: number; path: string; depth: number }[] = [];
+
+    // 从所有顶层（无上级）开始 BFS
+    for (const u of users) {
+      if (u.referrerId == null) {
+        queue.push({ id: u.id, path: '/', depth: 0 });
+      }
+    }
+
+    while (queue.length) {
+      const cur = queue.shift()!;
+      updates.push(cur);
+      const children = childrenMap.get(cur.id) || [];
+      for (const childId of children) {
+        queue.push({ id: childId, path: `${cur.path}${cur.id}/`, depth: cur.depth + 1 });
+      }
+    }
+
+    // 事务批量更新
+    await this.prisma.$transaction(async (tx) => {
+      for (const up of updates) {
+        await tx.user.update({ where: { id: up.id }, data: { path: up.path, depth: up.depth } });
+      }
+    });
+
+    return { updated: updates.length, details: updates.map((u) => ({ id: u.id, email: userMap.get(u.id).email, path: u.path, depth: u.depth })) };
   }
 
   // ---- 内部工具 ----
