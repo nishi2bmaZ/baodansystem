@@ -493,6 +493,7 @@ async function loadRelation(){
     <div id="treeRoot" class="mt12"><div class="card center muted">加载中…</div></div>`;
   body.querySelector('#relSearchBtn').onclick = doRelSearch;
   body.querySelector('#relSearch').addEventListener('keydown', e=>{ if(e.key==='Enter') doRelSearch(); });
+  const rb=body.querySelector('#relRefreshBtn'); if(rb) rb.onclick=()=>loadRoots();
   await loadRoots();
 }
 
@@ -540,12 +541,11 @@ function bindTree(scope){
 async function toggleNode(id, forceOpen){
   if(TR.open[id] && !forceOpen){ TR.open[id]=false; renderTree(); return; }
   TR.open[id]=true;
-  if(!TR.data[id]){
-    try{
-      const d=await api('GET','/admin/relation/children?userId='+id);
-      TR.data[id] = d.children||[];
-    }catch(e){ toast(e.message); TR.open[id]=false; return; }
-  }
+  // 每次展开都重新拉取最新下级，避免调整推荐关系后显示旧数据
+  try{
+    const d=await api('GET','/admin/relation/children?userId='+id);
+    TR.data[id] = d.children||[];
+  }catch(e){ toast(e.message); TR.open[id]=false; return; }
   renderTree();
 }
 
@@ -579,10 +579,9 @@ async function locateNode(id){
   try{ info=await api('GET','/admin/relation/node/'+id); }catch(e){ toast(e.message); return; }
   const path = [...(info.upline||[]).map(u=>u.id), info.node.id];
   for(const pid of path){
-    if(!TR.data[pid]){
-      try{ const d=await api('GET','/admin/relation/children?userId='+pid); TR.data[pid]=d.children||[]; }
-      catch(e){ break; }
-    }
+    // 每次定位都重新拉取各级最新下级，确保关系调整后定位结果正确
+    try{ const d=await api('GET','/admin/relation/children?userId='+pid); TR.data[pid]=d.children||[]; }
+    catch(e){ break; }
     TR.open[pid]=true;
   }
   TR.located=id;
