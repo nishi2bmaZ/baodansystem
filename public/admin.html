@@ -39,6 +39,31 @@
     .tphone { color:#888; font-size:12px; }
     .tstats { margin-left:auto; color:#B0862C; font-size:12px; }
     .tchildren { margin-top:2px; }
+
+    /* ===== 模板配置（优化版 UI） ===== */
+    .tpl-wrap { max-width: 600px; margin: 0 auto; }
+    .tpl-sec { background:#fff; border:1px solid rgba(226,210,168,.45); border-radius:14px; padding:16px; margin-bottom:14px; box-shadow:0 2px 10px rgba(120,96,40,.05); }
+    .tpl-sec-title { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:600; color:#2B2620; margin-bottom:4px; }
+    .tpl-num { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:#C7A14A; color:#fff; font-size:12px; font-weight:600; flex-shrink:0; }
+    .tpl-count { margin-left:auto; font-size:12px; font-weight:400; color:#9A9183; background:#FBF4E2; padding:2px 9px; border-radius:10px; }
+    .tpl-tip { font-size:12px; color:#9A9183; line-height:1.65; background:#FBF4E2; border-radius:8px; padding:8px 10px; margin:8px 0 14px; }
+    .field-card { border:1px solid #ECE7DC; border-radius:12px; padding:12px; margin-bottom:12px; background:#FCFBF8; transition:border-color .15s ease, box-shadow .15s ease; }
+    .field-card:hover { border-color:#E2D2A8; box-shadow:0 2px 8px rgba(150,120,50,.06); }
+    .fc-head { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    .fc-badge { width:20px; height:20px; border-radius:50%; background:#2B2620; color:#fff; font-size:12px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .fc-type-pill { font-size:12px; color:#B0862C; background:#FBF4E2; padding:2px 9px; border-radius:10px; }
+    .fc-del { margin-left:auto; font-size:13px; color:#E23A3A; cursor:pointer; padding:4px 6px; border-radius:6px; }
+    .fc-del:hover { background:#FBE7E7; }
+    .fc-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .fc-grid .field { margin-bottom:10px; }
+    .fc-toggle { display:flex; align-items:center; gap:8px; padding-top:10px; }
+    .fc-toggle input { width:18px; height:18px; accent-color:#C7A14A; }
+    .fc-empty { text-align:center; color:#9A9183; font-size:13px; padding:18px 0; }
+    @media (max-width:520px){ .fc-grid { grid-template-columns:1fr; } }
+    .tpl-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+    .chip { display:inline-block; font-size:12px; color:#6B6256; background:#F3E6C5; border-radius:8px; padding:3px 10px; }
+    .tpl-item { margin-bottom:10px; }
+    .tpl-item .sub { margin-top:6px; }
     /* 修改会员弹窗 */
     .modal-mask { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; display:flex; align-items:flex-start; justify-content:center; padding:24px 12px; overflow:auto; }
     .modal { background:#fff; width:100%; max-width:480px; border-radius:12px; overflow:hidden; }
@@ -321,49 +346,74 @@ async function loadTemplates(){
   const body=$('#pageBody');
   try{ A.templates = await api('GET','/admin/task-templates'); }catch(e){ toast(e.message); }
   const list = (A.templates||[]).map(t=>`
-    <div class="card">
-      <div class="title">${esc(t.name)} <span class="tag ${t.status==='PUBLISHED'?'approved':'pending'}">${t.status==='PUBLISHED'?'已发布':'草稿'}</span></div>
-      <div class="sub">${t.fields.map(f=>esc(f.label)+'('+TYPE_CN[f.type]+')').join('、') || '（无字段）'}</div>
+    <div class="card tpl-item">
+      <div class="title" style="display:flex;align-items:center;gap:8px">${esc(t.name)} <span class="tag ${t.status==='PUBLISHED'?'approved':'pending'}">${t.status==='PUBLISHED'?'已发布':'草稿'}</span></div>
+      <div class="sub">${t.fields.length} 个字段</div>
+      <div class="tpl-chips">${t.fields.map(f=>`<span class="chip">${esc(f.label)}·${TYPE_CN[f.type]||f.type}</span>`).join('') || '<span class="muted">（无字段）</span>'}</div>
     </div>`).join('');
   body.innerHTML = `
-    <div class="card">
-      <div class="title">新建模板</div>
-      <div class="field"><label>模板名称<span class="req">*</span></label><input type="text" id="tplName" placeholder="如：每日外呼报单"></div>
-      <div class="field"><label>状态</label>
-        <select id="tplStatus"><option value="DRAFT">草稿</option><option value="PUBLISHED">发布</option></select></div>
-      <div id="feList"></div>
-      <button class="btn ghost sm" id="addField" style="width:auto">+ 添加字段</button>
-      <button class="btn mt12" id="saveTpl">保存模板</button>
-    </div>
-    <div class="title" style="font-size:15px;margin:4px 0">已有模板</div>
-    ${list || '<div class="card center muted">暂无模板</div>'}`;
+    <div class="tpl-wrap">
+      <div class="tpl-sec">
+        <div class="tpl-sec-title"><span class="tpl-num">1</span>基本信息</div>
+        <p class="tpl-tip">模板用于定义一次任务需要收集哪些信息。保存后可在「任务发布」中选择使用。</p>
+        <div class="field"><label>模板名称<span class="req">*</span></label><input type="text" id="tplName" placeholder="如：每日外呼报单"></div>
+        <div class="field"><label>状态</label>
+          <select id="tplStatus"><option value="DRAFT">草稿</option><option value="PUBLISHED">发布</option></select>
+          <div class="hint">草稿仅保存不对外；发布后会员端可选择该模板对应的任务。</div>
+        </div>
+      </div>
+
+      <div class="tpl-sec">
+        <div class="tpl-sec-title"><span class="tpl-num">2</span>字段配置 <span class="tpl-count" id="feCount">${A.newFields.length} 个字段</span></div>
+        <p class="tpl-tip">点击下方「添加字段」逐条定义。支持 文本 / 数字 / 图片 / 下拉 / 日期 / 勾选 六类。下拉类型需填写选项。</p>
+        <div id="feList"></div>
+        <button class="btn ghost sm" id="addField" style="width:auto">+ 添加字段</button>
+      </div>
+
+      <button class="btn mt16" id="saveTpl">保存模板</button>
+
+      <div class="tpl-sec" style="margin-top:18px">
+        <div class="tpl-sec-title"><span class="tpl-num">3</span>已有模板 <span class="tpl-count">${(A.templates||[]).length}</span></div>
+        ${list || '<div class="fc-empty">暂无模板，先在上方新建一个吧</div>'}
+      </div>
+    </div>`;
   renderFieldEditor(body);
   body.querySelector('#addField').onclick = ()=>{ A.newFields.push({key:'',label:'',type:'text',required:false,options:''}); renderFieldEditor(body); };
   body.querySelector('#saveTpl').onclick = saveTemplate;
 }
 function renderFieldEditor(body){
   const wrap = body.querySelector('#feList');
+  const counter = body.querySelector('#feCount');
+  if(counter) counter.textContent = A.newFields.length + ' 个字段';
+  if(!A.newFields.length){
+    wrap.innerHTML = '<div class="fc-empty">还没有字段，点「+ 添加字段」开始</div>';
+    return;
+  }
   wrap.innerHTML = A.newFields.map((f,i)=>`
-    <div class="field-editor" data-i="${i}">
-      <div class="fe-head"><span>字段 #${i+1}</span><span style="color:#ee0a24;cursor:pointer" data-del="${i}">删除</span></div>
-      <div class="row">
-        <div class="field" style="margin-bottom:8px"><label>字段key</label><input type="text" data-k="key" value="${esc(f.key)}" placeholder="英文,如shop"></div>
-        <div class="field" style="margin-bottom:8px"><label>显示名</label><input type="text" data-k="label" value="${esc(f.label)}" placeholder="如：门店"></div>
+    <div class="field-card" data-i="${i}">
+      <div class="fc-head">
+        <span class="fc-badge">${i+1}</span>
+        <span class="fc-type-pill" data-typepill>${TYPE_CN[f.type]||f.type}</span>
+        <span class="fc-del" data-del="${i}">✕ 删除</span>
       </div>
-      <div class="row">
-        <div class="field" style="margin-bottom:8px"><label>类型</label>
+      <div class="fc-grid">
+        <div class="field" style="margin-bottom:0"><label>字段标识 key<span class="req">*</span></label><input type="text" data-k="key" value="${esc(f.key)}" placeholder="英文,如 shop"></div>
+        <div class="field" style="margin-bottom:0"><label>显示名<span class="req">*</span></label><input type="text" data-k="label" value="${esc(f.label)}" placeholder="如：门店"></div>
+      </div>
+      <div class="fc-grid">
+        <div class="field" style="margin-bottom:0"><label>类型</label>
           <select data-k="type">
             ${['text','number','image','dropdown','date','checkbox'].map(t=>`<option value="${t}" ${f.type===t?'selected':''}>${TYPE_CN[t]}</option>`).join('')}
           </select></div>
-        <div class="field" style="margin-bottom:8px"><label>必填 <input type="checkbox" data-k="required" ${f.required?'checked':''}></label></div>
+        <div class="field fc-toggle" style="margin-bottom:0"><label style="margin:0;display:flex;align-items:center;gap:8px"><input type="checkbox" data-k="required" ${f.required?'checked':''}> 设为必填项</label></div>
       </div>
-      <div class="field" style="margin-bottom:0" data-optwrap style="${f.type==='dropdown'?'':'display:none'}">
+      <div class="field" data-optwrap style="margin-bottom:0;${f.type==='dropdown'?'':'display:none'}">
         <label>下拉选项（逗号分隔）</label><input type="text" data-k="options" value="${esc(f.options||'')}" placeholder="华东,华北,华南"></div>
     </div>`).join('');
   wrap.querySelectorAll('[data-k]').forEach(inp=>{
     inp.onchange = ()=>{ const i=+inp.closest('[data-i]').dataset.i; const k=inp.dataset.k;
       A.newFields[i][k] = (k==='required') ? inp.checked : inp.value;
-      if(k==='type'){ const opt=inp.closest('.field-editor').querySelector('[data-optwrap]'); opt.style.display = inp.value==='dropdown'?'':'none'; }
+      if(k==='type'){ const opt=inp.closest('.field-card').querySelector('[data-optwrap]'); opt.style.display = inp.value==='dropdown'?'':'none'; const pill=inp.closest('.field-card').querySelector('[data-typepill]'); if(pill) pill.textContent = TYPE_CN[inp.value]||inp.value; }
     };
   });
   wrap.querySelectorAll('[data-del]').forEach(b=> b.onclick=()=>{ A.newFields.splice(+b.dataset.del,1); if(!A.newFields.length) A.newFields.push({key:'',label:'',type:'text',required:false,options:''}); renderFieldEditor(body); });
