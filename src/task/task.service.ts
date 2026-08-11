@@ -241,7 +241,7 @@ export class TaskService {
   }
 
   // ============ 后台：按提交ID批量导出 ============
-  async exportSubmissions(ids: number[], operatorId = 0) {
+  async exportSubmissions(ids: number[], operatorId = 0, req?: any) {
     if (!ids || !ids.length) throw new BadRequestException('请选择要导出的记录');
     const subs = await this.prisma.submission.findMany({
       where: { id: { in: ids } },
@@ -250,18 +250,20 @@ export class TaskService {
     });
     if (!subs.length) throw new NotFoundException('未找到对应的提交记录');
 
-    // 字段并集（按首次出现顺序），兼容跨模板导出
-    const fieldMap = new Map<string, string>();
+    // 字段并集（按首次出现顺序），兼容跨模板导出；记录类型用于图片转绝对网址
+    const fieldMap = new Map<string, { label: string; type: string }>();
     subs.forEach((s: any) => {
       const tpl = s.instance && s.instance.template;
       if (!tpl) return;
       try {
         JSON.parse(tpl.schemaJson).forEach((f: any) => {
-          if (!fieldMap.has(f.key)) fieldMap.set(f.key, f.label);
+          if (!fieldMap.has(f.key)) fieldMap.set(f.key, { label: f.label, type: f.type });
         });
       } catch (e) {}
     });
-    const fieldList = [...fieldMap.entries()];
+    const fieldList = [...fieldMap.entries()].map(([k, v]) => [k, v.label, v.type] as [string, string, string]);
+    // 图片绝对网址基线：优先用环境变量 PUBLIC_BASE，否则取当前导出请求的真实 Host（自动适配域名/端口）
+    const base = process.env.PUBLIC_BASE || (req && req.get ? `${req.protocol}://${req.get('host')}` : '');
 
     const header = [
       '提交ID', '任务标题', '模板名称', '会员邮箱', '手机号', '状态',
@@ -271,7 +273,7 @@ export class TaskService {
     ];
     const rows = subs.map((s: any) => {
       const d = s.data ? JSON.parse(s.data) : {};
-      const imgs = s.images ? JSON.parse(s.images) : [];
+      const imgs = (s.images ? JSON.parse(s.images) : []).map((u: string) => this.absUrl(base, u));
       const tpl = s.instance && s.instance.template;
       return [
         s.id,
@@ -283,7 +285,7 @@ export class TaskService {
         s.submittedAt ? new Date(s.submittedAt).toLocaleString('zh-CN') : '',
         s.reviewedAt ? new Date(s.reviewedAt).toLocaleString('zh-CN') : '',
         s.rejectReason || '',
-        ...fieldList.map(([k]) => (d[k] ?? '')),
+        ...fieldList.map(([k, , type]) => (type === 'image' ? this.absUrl(base, d[k]) : (d[k] ?? ''))),
         imgs.join(' '),
       ];
     });
@@ -410,5 +412,13 @@ export class TaskService {
     const s = String(v ?? '');
     if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
     return s;
+  }
+
+  // 将存储的图片路径/网址统一为可打开的绝对网址
+  private absUrl(base: string, u: any): string {
+    if (!u || typeof u !== 'string') return '';
+    if (/^https?:\/\//i.test(u)) return u; // 已是绝对网址，原样保留
+    const p = u.startsWith('/') ? u : `/uploads/${u}`; // 兼容「/uploads/x」与「x」两种存储形式
+    return base ? base + p : p;
   }
 }

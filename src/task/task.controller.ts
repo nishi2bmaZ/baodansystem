@@ -76,9 +76,9 @@ export class TaskController {
   }
 
   @Post('admin/export/selected')
-  exportSelected(@Body() body: { ids?: number[] }, @Headers('x-admin-key') key: string) {
+  exportSelected(@Body() body: { ids?: number[] }, @Headers('x-admin-key') key: string, @Req() req: any) {
     if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
-    return this.task.exportSubmissions(body.ids || []);
+    return this.task.exportSubmissions(body.ids || [], 0, req);
   }
 
   // ===== 会员（需登录 Token） =====
