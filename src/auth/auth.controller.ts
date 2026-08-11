@@ -6,6 +6,7 @@ import {
   UseGuards,
   Req,
   Param,
+  Query,
   Headers,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -37,10 +38,26 @@ export class AuthController {
     return req.user;
   }
 
-  /** 客服人工审核通过：MVP 用 x-admin-key 简单保护，后续可换正式后台账号 */
-  @Post('admin/users/:id/review')
-  review(@Param('id') id: string, @Headers('x-admin-key') key: string) {
+  /** 后台：会员列表（可按状态筛选、按邮箱/手机号搜索） */
+  @Get('admin/users')
+  listUsers(
+    @Query('status') status: string,
+    @Query('q') q: string,
+    @Headers('x-admin-key') key: string,
+  ) {
     if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
-    return this.auth.review(parseInt(id, 10));
+    return this.auth.listUsers(status, q);
+  }
+
+  /** 后台：审核会员（action: approve=通过并激活, disable=禁用） */
+  @Post('admin/users/:id/review')
+  review(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Headers('x-admin-key') key: string,
+  ) {
+    if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
+    const action = body && body.action === 'disable' ? 'disable' : 'approve';
+    return this.auth.review(parseInt(id, 10), action);
   }
 }

@@ -103,10 +103,50 @@ export class AuthService {
     };
   }
 
-  /** 客服人工审核通过（Q4） */
-  async review(userId: number, operatorId = 0) {
+  /** 后台：会员列表（状态筛选 + 邮箱/手机号搜索） */
+  async listUsers(status?: string, q?: string) {
+    const where: any = {};
+    if (status && ['PENDING', 'ACTIVE', 'DISABLED'].includes(status)) {
+      where.status = status;
+    }
+    if (q) {
+      where.OR = [
+        { email: { contains: q, mode: 'insensitive' } },
+        { phone: { contains: q } },
+      ];
+    }
+    const users = await this.prisma.user.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: { referrer: { select: { id: true, email: true } } },
+    });
+    return users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      phone: u.phone,
+      status: u.status,
+      inviteCode: u.inviteCode,
+      path: u.path,
+      depth: u.depth,
+      referrerId: u.referrerId,
+      referrerEmail: u.referrer ? u.referrer.email : null,
+      createdAt: u.createdAt,
+      reviewedAt: u.reviewedAt,
+    }));
+  }
+
+  /** 后台：审核会员（approve=激活, disable=禁用） */
+  async review(userId: number, action: 'approve' | 'disable' = 'approve', operatorId = 0) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('用户不存在');
+    if (action === 'disable') {
+      const updated = await this.prisma.user.update({
+        where: { id: userId },
+        data: { status: 'DISABLED', reviewedAt: new Date(), reviewedById: operatorId },
+      });
+      return { id: updated.id, status: updated.status, message: '账号已禁用' };
+    }
     if (user.status === 'ACTIVE') return { message: '已是激活状态' };
     const updated = await this.prisma.user.update({
       where: { id: userId },

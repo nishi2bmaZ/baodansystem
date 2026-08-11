@@ -6,24 +6,46 @@
   <title>后台管理 · 团队任务报单</title>
   <link rel="stylesheet" href="css/style.css" />
   <style>
-    .tabs { display:flex; background:#fff; border-bottom:1px solid #ebedf0; position:sticky; top:0; z-index:40; }
-    .tabs .tab { flex:1; text-align:center; padding:12px 0; font-size:15px; color:#666; cursor:pointer; }
-    .tabs .tab.active { color:#07c160; font-weight:600; border-bottom:2px solid #07c160; }
-    .field-editor { border:1px dashed #dcdfe6; border-radius:10px; padding:10px; margin-bottom:10px; }
-    .field-editor .fe-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:13px; color:#666; }
+    .admin { display:flex; min-height:100vh; }
+    .sidebar { width:200px; background:#1f2d3d; color:#cfd8e3; flex-shrink:0; display:flex; flex-direction:column; position:fixed; left:0; top:0; bottom:0; z-index:50; }
+    .sidebar .brand { padding:18px 16px; font-size:17px; font-weight:700; color:#fff; border-bottom:1px solid #2c3e50; line-height:1.4; }
+    .sidebar .brand small { font-size:12px; font-weight:400; color:#7f8ea3; }
+    .sidebar nav { flex:1; padding:8px 0; overflow-y:auto; }
+    .nav-item { padding:13px 18px; font-size:15px; cursor:pointer; color:#cfd8e3; border-left:3px solid transparent; }
+    .nav-item:hover { background:#26384c; }
+    .nav-item.active { background:#07c160; color:#fff; border-left-color:#fff; font-weight:600; }
+    .side-foot { padding:12px 16px; font-size:12px; color:#7f8ea3; border-top:1px solid #2c3e50; }
+    .side-foot .logout { color:#ff7875; cursor:pointer; margin-top:4px; display:inline-block; }
+    .content { flex:1; margin-left:200px; background:#f5f6f8; min-height:100vh; }
+    .content-head { height:52px; display:flex; align-items:center; padding:0 16px; background:#fff; border-bottom:1px solid #ebedf0; font-size:16px; font-weight:600; position:sticky; top:0; z-index:40; }
+    .page-body { padding:14px; }
+    .hamburger { display:none; margin-right:12px; font-size:22px; cursor:pointer; line-height:1; }
+    .overlay { display:none; }
+    .tree { list-style:none; padding-left:18px; margin:6px 0; }
+    .tree li { padding:4px 0; font-size:14px; }
+    .tree .tag { font-size:12px; margin-right:6px; }
+    @media (max-width:768px){
+      .sidebar { transform:translateX(-100%); transition:transform .25s; width:190px; }
+      .admin.sidebar-open .sidebar { transform:translateX(0); }
+      .content { margin-left:0; }
+      .hamburger { display:inline-flex; }
+      .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:45; }
+      .admin.sidebar-open .overlay { display:block; }
+    }
   </style>
 </head>
 <body>
-  <div class="topbar" id="topbar"><span id="topTitle">后台管理</span></div>
-  <div id="app" class="wrap"></div>
+  <div id="app"></div>
   <div class="toast" id="toast"></div>
 
 <script>
 /* ===================== 基础 ===================== */
 const AK_KEY = 'bd_admin_key';
-const STATUS_CN = { GRABBED:'已抢单', SUBMITTED:'待审核', APPROVED:'通过', REJECTED:'驳回' };
+const USER_STATUS_CN = { PENDING:'待审核', ACTIVE:'已通过', DISABLED:'已禁用' };
+const SUB_STATUS_CN = { GRABBED:'已抢单', SUBMITTED:'待审核', APPROVED:'通过', REJECTED:'驳回' };
 const TYPE_CN = { text:'文本', number:'数字', image:'图片', dropdown:'下拉', date:'日期', checkbox:'勾选' };
-let A = { view:'login', tab:'templates', templates:[], instances:[], subs:[], curInstanceId:null,
+const MENU_TITLE = { members:'会员管理', templates:'模板配置', publish:'任务发布', review:'提交审核', relation:'关系树' };
+let A = { view:'login', menu:'members', templates:[], instances:[], subs:[], curInstanceId:null,
           newFields:[{key:'',label:'',type:'text',required:false,options:''}] };
 
 const $ = (s, r=document) => r.querySelector(s);
@@ -45,60 +67,120 @@ async function api(method, path, body){
   return data;
 }
 
-/* ===================== 渲染 ===================== */
+/* ===================== 启动 / 登录 ===================== */
 function render(){
-  const app=$('#app'), top=$('#topbar');
-  top.querySelector('#topTitle').textContent = A.view==='login' ? '后台管理' : ('后台管理 · ' + ({templates:'模板配置',publish:'任务发布',review:'提交审核'}[A.tab]));
+  const app=$('#app');
   if(A.view==='login'){ renderLogin(app); return; }
   renderAdmin(app);
 }
 function renderLogin(app){
   app.innerHTML = `
   <div class="auth-box">
-    <div class="logo">后台管理</div>
-    <div class="slogan">请输入管理密钥（x-admin-key）</div>
+    <div class="logo">团队任务报单</div>
+    <div class="slogan">管理后台 · 请输入管理密钥</div>
     <div class="card">
       <div class="field"><label>管理密钥<span class="req">*</span></label>
         <input type="text" id="ak" placeholder="默认 admin123"></div>
-      <button class="btn" id="loginBtn">进入</button>
+      <button class="btn" id="loginBtn">进入后台</button>
     </div>
-    <div class="switch-line" id="logoutLink" style="display:none">退出登录</div>
   </div>`;
   $('#loginBtn').onclick = doLogin;
 }
 async function doLogin(){
   const k=$('#ak').value.trim(); if(!k){ toast('请输入密钥'); return; }
-  try{ setAK(k); await api('GET','/admin/task-templates'); A.view='templates'; render(); }
+  try{ setAK(k); await api('GET','/admin/users?status=PENDING'); A.view='admin'; render(); }
   catch(e){ clearAK(); toast('密钥错误：'+e.message); }
 }
 
-/* ===================== 后台主框架 ===================== */
+/* ===================== 后台主框架（左菜单 + 右内容） ===================== */
 function renderAdmin(app){
   app.innerHTML = `
-    <div class="tabs">
-      <div class="tab ${A.tab==='templates'?'active':''}" data-tab="templates">模板配置</div>
-      <div class="tab ${A.tab==='publish'?'active':''}" data-tab="publish">任务发布</div>
-      <div class="tab ${A.tab==='review'?'active':''}" data-tab="review">提交审核</div>
-    </div>
-    <div id="tabBody" class="mt12"></div>
-    <div class="center muted mt16" id="logoutLink" style="cursor:pointer;font-size:13px">退出登录</div>`;
-  app.querySelectorAll('.tabs .tab').forEach(t=> t.onclick=()=>switchTab(t.dataset.tab));
-  app.querySelector('#logoutLink').onclick = ()=>{ clearAK(); A.view='login'; render(); };
-  switchTab(A.tab, true);
+  <div class="admin" id="adminRoot">
+    <div class="overlay" id="overlay"></div>
+    <aside class="sidebar">
+      <div class="brand">团队任务报单<br><small>管理后台</small></div>
+      <nav>
+        <div class="nav-item ${A.menu==='members'?'active':''}" data-menu="members">会员管理</div>
+        <div class="nav-item ${A.menu==='templates'?'active':''}" data-menu="templates">模板配置</div>
+        <div class="nav-item ${A.menu==='publish'?'active':''}" data-menu="publish">任务发布</div>
+        <div class="nav-item ${A.menu==='review'?'active':''}" data-menu="review">提交审核</div>
+        <div class="nav-item ${A.menu==='relation'?'active':''}" data-menu="relation">关系树</div>
+      </nav>
+      <div class="side-foot">管理密钥已登录<div class="logout" id="logoutBtn">退出登录</div></div>
+    </aside>
+    <main class="content">
+      <div class="content-head"><span class="hamburger" id="hamburger">☰</span><span id="pageTitle">${MENU_TITLE[A.menu]}</span></div>
+      <div id="pageBody" class="page-body"></div>
+    </main>
+  </div>`;
+  app.querySelectorAll('.nav-item').forEach(t=> t.onclick=()=> setMenu(t.dataset.menu));
+  $('#logoutBtn').onclick = ()=>{ clearAK(); A.view='login'; render(); };
+  $('#hamburger').onclick = ()=> $('#adminRoot').classList.toggle('sidebar-open');
+  $('#overlay').onclick = ()=> $('#adminRoot').classList.remove('sidebar-open');
+  setMenu(A.menu, true);
 }
-function switchTab(tab, silent){
-  A.tab = tab;
-  if(!silent) render();
-  const body = $('#tabBody');
-  if(tab==='templates') loadTemplates(body);
-  else if(tab==='publish') loadPublish(body);
-  else if(tab==='review') loadReview(body);
+function setMenu(menu, silent){
+  A.menu = menu;
+  $$('.nav-item').forEach(n=> n.classList.toggle('active', n.dataset.menu===menu));
+  const pt=$('#pageTitle'); if(pt) pt.textContent = MENU_TITLE[menu]||'';
+  const body=$('#pageBody'); if(!body) return;
+  if(menu==='members') loadMembers();
+  else if(menu==='templates') loadTemplates();
+  else if(menu==='publish') loadPublish();
+  else if(menu==='review') loadReview();
+  else if(menu==='relation') loadRelation();
+  if(!silent && $('#adminRoot')) $('#adminRoot').classList.remove('sidebar-open');
+}
+
+/* ===================== 会员管理 ===================== */
+async function loadMembers(){
+  const body=$('#pageBody');
+  const status = (body.querySelector('#mStatus')||{}).value || 'PENDING';
+  const q = (body.querySelector('#mSearch')||{}).value || '';
+  let users=[];
+  try{ users = await api('GET','/admin/users?status='+encodeURIComponent(status)+'&q='+encodeURIComponent(q)); }catch(e){ toast(e.message); }
+  const list = (users||[]).map(u=>`
+    <div class="card">
+      <div class="title">${esc(u.email)} <span class="tag ${u.status==='ACTIVE'?'approved':u.status==='DISABLED'?'rejected':'pending'}">${USER_STATUS_CN[u.status]||u.status}</span></div>
+      <div class="sub">手机：${esc(u.phone)} ｜ 上级：${esc(u.referrerEmail||'无')} ｜ 注册：${esc((u.createdAt||'').slice(0,10))}</div>
+      <div class="row" style="margin-top:8px;gap:8px">
+        ${u.status!=='ACTIVE' ? `<button class="btn sm" data-approve="${u.id}">通过</button>`:''}
+        ${u.status==='ACTIVE' ? `<button class="btn sm danger" data-disable="${u.id}">禁用</button>`:''}
+        ${u.status==='DISABLED' ? `<button class="btn sm" data-approve="${u.id}">启用</button>`:''}
+      </div>
+    </div>`).join('');
+  body.innerHTML = `
+    <div class="card">
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="margin:0"><label>状态</label>
+          <select id="mStatus">
+            <option value="PENDING">待审核</option>
+            <option value="ACTIVE">已通过</option>
+            <option value="DISABLED">已禁用</option>
+            <option value="">全部</option>
+          </select></div>
+        <div class="field" style="margin:0;flex:1;min-width:140px"><label>搜索(邮箱/手机号)</label><input type="text" id="mSearch" placeholder="输入关键字"></div>
+        <button class="btn sm" id="mSearchBtn">查询</button>
+        <button class="btn sm ghost" id="mRefresh">刷新</button>
+      </div>
+    </div>
+    ${list || '<div class="card center muted">暂无会员</div>'}`;
+  const ss=body.querySelector('#mStatus'); if(ss) ss.value=status;
+  const sb=body.querySelector('#mSearchBtn'); if(sb) sb.onclick=()=>loadMembers();
+  const rb=body.querySelector('#mRefresh'); if(rb) rb.onclick=()=>loadMembers();
+  body.querySelectorAll('[data-approve]').forEach(b=> b.onclick=()=>memberAction(b.dataset.approve,'approve'));
+  body.querySelectorAll('[data-disable]').forEach(b=> b.onclick=()=>memberAction(b.dataset.disable,'disable'));
+}
+async function memberAction(id, action){
+  try{ await api('POST','/admin/users/'+id+'/review',{action}); toast(action==='approve'?'已通过/启用':'已禁用'); loadMembers(); }
+  catch(e){ toast(e.message); }
 }
 
 /* ===================== 模板配置 ===================== */
-async function loadTemplates(body){
+async function loadTemplates(){
+  const body=$('#pageBody');
   try{ A.templates = await api('GET','/admin/task-templates'); }catch(e){ toast(e.message); }
-  const list = A.templates.map(t=>`
+  const list = (A.templates||[]).map(t=>`
     <div class="card">
       <div class="title">${esc(t.name)} <span class="tag ${t.status==='PUBLISHED'?'approved':'pending'}">${t.status==='PUBLISHED'?'已发布':'草稿'}</span></div>
       <div class="sub">${t.fields.map(f=>esc(f.label)+'('+TYPE_CN[f.type]+')').join('、') || '（无字段）'}</div>
@@ -155,22 +237,23 @@ async function saveTemplate(){
   })).filter(f=>f.key && f.label);
   if(!fields.length){ toast('至少添加一个有效字段（key和显示名必填）'); return; }
   for(const f of fields){
-    if(!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(f.key)){ toast(`字段key非法：${f.key}`); return; }
-    if(f.type==='dropdown' && (!f.options||!f.options.length)){ toast(`下拉字段「${f.label}」需提供选项`); return; }
+    if(!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(f.key)){ toast('字段key非法：'+f.key); return; }
+    if(f.type==='dropdown' && (!f.options||!f.options.length)){ toast('下拉字段「'+f.label+'」需提供选项'); return; }
   }
   try{
     await api('POST','/admin/task-template',{name,status,fields});
     toast('模板已保存');
     A.newFields=[{key:'',label:'',type:'text',required:false,options:''}];
-    loadTemplates($('#tabBody'));
+    loadTemplates();
   }catch(e){ toast(e.message); }
 }
 
 /* ===================== 任务发布 ===================== */
-async function loadPublish(body){
+async function loadPublish(){
+  const body=$('#pageBody');
   try{ A.templates=await api('GET','/admin/task-templates'); A.instances=await api('GET','/admin/task-instances'); }catch(e){ toast(e.message); }
-  const opts=A.templates.map(t=>`<option value="${t.id}">${esc(t.name)}（${t.status==='PUBLISHED'?'已发布':'草稿'}）</option>`).join('');
-  const list=A.instances.map(i=>`
+  const opts=(A.templates||[]).map(t=>`<option value="${t.id}">${esc(t.name)}（${t.status==='PUBLISHED'?'已发布':'草稿'}）</option>`).join('');
+  const list=(A.instances||[]).map(i=>`
     <div class="card">
       <div class="title">${esc(i.title)}</div>
       <div class="sub">日期：${esc((i.date||'').slice(0,10))} ｜ 名额 ${i.grabbed}/${i.quota} ｜ 状态 ${i.status}</div>
@@ -198,14 +281,15 @@ async function publish(){
   const payload={ templateId, title, date, quota,
     startTime: start?new Date(start).toISOString():new Date(date+'T00:00:00').toISOString(),
     endTime: end?new Date(end).toISOString():new Date(date+'T23:59:59').toISOString() };
-  try{ await api('POST','/admin/task-instance',payload); toast('任务已发布'); loadPublish($('#tabBody')); }
+  try{ await api('POST','/admin/task-instance',payload); toast('任务已发布'); loadPublish(); }
   catch(e){ toast(e.message); }
 }
 
 /* ===================== 提交审核 ===================== */
-async function loadReview(body){
+async function loadReview(){
+  const body=$('#pageBody');
   try{ A.instances=await api('GET','/admin/task-instances'); }catch(e){ toast(e.message); }
-  const opts=A.instances.map(i=>`<option value="${i.id}">${esc(i.title)}（${i.grabbed}/${i.quota}）</option>`).join('');
+  const opts=(A.instances||[]).map(i=>`<option value="${i.id}">${esc(i.title)}（${i.grabbed}/${i.quota}）</option>`).join('');
   body.innerHTML = `
     <div class="field"><label>选择任务</label><select id="rInst">${opts||'<option>暂无任务</option>'}</select></div>
     <div id="rList" class="mt12"></div>`;
@@ -233,7 +317,7 @@ async function loadSubs(instId){
          </div>`
       : `<div class="sub mt8">${s.status==='REJECTED'&&s.rejectReason?('驳回理由：'+esc(s.rejectReason)):'已处理'}</div>`;
     return `<div class="card">
-      <div class="title">#${s.id} <span class="tag ${s.status.toLowerCase()}">${STATUS_CN[s.status]||s.status}</span></div>
+      <div class="title">#${s.id} <span class="tag ${s.status.toLowerCase()}">${SUB_STATUS_CN[s.status]||s.status}</span></div>
       <div class="sub">会员：${esc(s.user? s.user.email:'')} ｜ ${esc(s.user? s.user.phone:'')}</div>
       <div class="mt8">${rows||'<div class="muted">（无字段）</div>'}${imgMore}</div>
       ${actions}
@@ -249,8 +333,39 @@ async function review(id, action, note){
   catch(e){ toast(e.message); }
 }
 
+/* ===================== 关系树 ===================== */
+async function loadRelation(){
+  const body=$('#pageBody');
+  body.innerHTML = `
+    <div class="card">
+      <div class="field"><label>用户ID</label><input type="number" id="rUserId" placeholder="输入会员ID"></div>
+      <button class="btn sm" id="rTreeBtn">查看团队树</button>
+    </div>
+    <div id="rTreeOut" class="mt12"></div>`;
+  body.querySelector('#rTreeBtn').onclick = async ()=>{
+    const id=body.querySelector('#rUserId').value;
+    if(!id){ toast('请输入用户ID'); return; }
+    const out=body.querySelector('#rTreeOut');
+    try{
+      const data=await api('GET','/admin/relation/tree?userId='+id);
+      out.innerHTML = `<div class="sub">团队人数：${data.totalMembers} ｜ 层级：${data.levels}</div>` + renderTree(data.tree);
+    }catch(e){ out.innerHTML='<div class="card center muted">'+esc(e.message)+'</div>'; }
+  };
+}
+function renderTree(nodes){
+  if(!nodes || !nodes.length) return '<div class="muted">（无下级）</div>';
+  return '<ul class="tree">'+nodes.map(n=>{
+    const st=USER_STATUS_CN[n.status]||n.status;
+    return `<li><span class="tag ${n.status==='ACTIVE'?'approved':n.status==='DISABLED'?'rejected':'pending'}">${st}</span> ${esc(n.email)}（ID:${n.id}）${renderTree(n.children)}</li>`;
+  }).join('')+'</ul>';
+}
+
 /* ===================== 启动 ===================== */
-if(getAK()){ A.view='templates'; render(); /* 校验key是否仍有效 */ api('GET','/admin/task-templates').catch(()=>{ clearAK(); A.view='login'; render(); }); }
+if(getAK()){
+  A.view='admin';
+  render();
+  api('GET','/admin/users?status=PENDING').catch(()=>{ clearAK(); A.view='login'; render(); });
+}
 else { render(); }
 </script>
 </body>
