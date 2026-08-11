@@ -108,13 +108,18 @@ body {
 .field > label { display: block; font-size: 14px; margin-bottom: 7px; color: var(--ink-2); font-weight: 500; }
 .field .req { color: var(--danger); margin-left: 2px; }
 .field input[type=text], .field input[type=number], .field input[type=date],
-.field input[type=email], .field input[tel], .field select, .field textarea {
+.field input[type=datetime-local], .field input[type=email], .field input[type=tel],
+.field select, .field textarea {
+  -webkit-appearance: none; -moz-appearance: none; appearance: none;
   width: 100%; border: 1px solid var(--line); border-radius: var(--radius-sm);
   padding: 12px 13px; font-size: 15px; background: #fff; color: var(--ink);
   outline: none; font-family: inherit; transition: border-color .15s ease, box-shadow .15s ease;
 }
 .field input:focus, .field select:focus, .field textarea:focus {
   border-color: var(--gold); box-shadow: 0 0 0 3px rgba(199, 161, 74, .14);
+}
+.field input:disabled, .field input[readonly], .field select:disabled, .field textarea:disabled {
+  background: var(--bg-2); color: var(--ink-3); cursor: not-allowed; opacity: .7;
 }
 .field textarea { resize: vertical; min-height: 76px; }
 .field .hint { color: var(--ink-3); font-size: 12px; margin-top: 5px; }

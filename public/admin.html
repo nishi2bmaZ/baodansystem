@@ -466,13 +466,10 @@ async function loadPublish(){
       <div class="tpl-sec">
         <div class="tpl-sec-title"><span class="tpl-num">2</span>名额与时间</div>
         <p class="tpl-tip">名额为该任务可抢的槽位总数；开始 / 结束时间留空时，默认取任务日期当天 0:00–24:00。</p>
+        <div class="field"><label>名额（总槽位）<span class="req">*</span></label><input type="number" id="pQuota" value="10"></div>
         <div class="fc-grid">
-          <div class="field"><label>名额（总槽位）<span class="req">*</span></label><input type="number" id="pQuota" value="10"></div>
           <div class="field"><label>开始时间</label><input type="datetime-local" id="pStart"></div>
-        </div>
-        <div class="fc-grid">
           <div class="field"><label>结束时间</label><input type="datetime-local" id="pEnd"></div>
-          <div></div>
         </div>
         <button class="btn mt12" id="pubBtn">发布任务</button>
       </div>
