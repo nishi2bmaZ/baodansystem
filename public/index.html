@@ -7,12 +7,14 @@
   <link rel="stylesheet" href="css/style.css" />
   <style>
     .entry { display:block; max-width:360px; margin:14vh auto 0; padding:0 20px; }
-    .entry .logo { text-align:center; font-size:24px; font-weight:700; color:#07c160; margin-bottom:4px; }
-    .entry .slogan { text-align:center; color:#999; font-size:13px; margin-bottom:34px; }
+    .entry .logo { text-align:center; font-size:24px; font-weight:700; color:#C7A14A; margin-bottom:4px; letter-spacing:.5px; }
+    .entry .slogan { text-align:center; color:#9A9183; font-size:13px; margin-bottom:34px; }
     .entry a { display:flex; align-items:center; justify-content:center; gap:10px;
-      height:58px; border-radius:14px; margin-bottom:16px; font-size:17px; font-weight:600; }
-    .entry .m { background:#07c160; color:#fff; }
-    .entry .a { background:#fff; color:#07c160; border:1px solid #07c160; }
+      height:58px; border-radius:14px; margin-bottom:16px; font-size:17px; font-weight:600;
+      transition: transform .08s ease, box-shadow .15s ease; }
+    .entry a:active { transform: scale(.985); }
+    .entry .m { background:linear-gradient(135deg,#E0C078,#C7A14A); color:#fff; box-shadow:0 4px 14px rgba(150,120,50,.2); }
+    .entry .a { background:#fff; color:#C7A14A; border:1px solid #E2D2A8; }
     .entry .ic { font-size:22px; }
   </style>
 </head>
