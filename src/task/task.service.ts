@@ -240,6 +240,74 @@ export class TaskService {
     return { url: `/exports/${fname}`, rowCount: rows.length };
   }
 
+  // ============ 后台：按提交ID批量导出 ============
+  async exportSubmissions(ids: number[], operatorId = 0) {
+    if (!ids || !ids.length) throw new BadRequestException('请选择要导出的记录');
+    const subs = await this.prisma.submission.findMany({
+      where: { id: { in: ids } },
+      include: { user: true, instance: { include: { template: true } } },
+      orderBy: { id: 'asc' },
+    });
+    if (!subs.length) throw new NotFoundException('未找到对应的提交记录');
+
+    // 字段并集（按首次出现顺序），兼容跨模板导出
+    const fieldMap = new Map<string, string>();
+    subs.forEach((s: any) => {
+      const tpl = s.instance && s.instance.template;
+      if (!tpl) return;
+      try {
+        JSON.parse(tpl.schemaJson).forEach((f: any) => {
+          if (!fieldMap.has(f.key)) fieldMap.set(f.key, f.label);
+        });
+      } catch (e) {}
+    });
+    const fieldList = [...fieldMap.entries()];
+
+    const header = [
+      '提交ID', '任务标题', '模板名称', '会员邮箱', '手机号', '状态',
+      '提交时间', '审核时间', '驳回理由',
+      ...fieldList.map(([, l]) => l),
+      '图片',
+    ];
+    const rows = subs.map((s: any) => {
+      const d = s.data ? JSON.parse(s.data) : {};
+      const imgs = s.images ? JSON.parse(s.images) : [];
+      const tpl = s.instance && s.instance.template;
+      return [
+        s.id,
+        s.instance ? s.instance.title : '',
+        tpl ? tpl.name : '',
+        s.user ? s.user.email : '',
+        s.user ? s.user.phone : '',
+        STATUS_CN[s.status] || s.status,
+        s.submittedAt ? new Date(s.submittedAt).toLocaleString('zh-CN') : '',
+        s.reviewedAt ? new Date(s.reviewedAt).toLocaleString('zh-CN') : '',
+        s.rejectReason || '',
+        ...fieldList.map(([k]) => (d[k] ?? '')),
+        imgs.join(' '),
+      ];
+    });
+    const csv = [header, ...rows]
+      .map((r) => r.map((c) => this.csvCell(c)).join(','))
+      .join('\n');
+
+    const dir = join(process.cwd(), 'exports');
+    await fs.mkdir(dir, { recursive: true });
+    const fname = `submissions_${Date.now()}.csv`;
+    await fs.writeFile(join(dir, fname), '﻿' + csv, 'utf8');
+
+    await this.prisma.exportRecord.create({
+      data: {
+        instanceId: subs[0].instanceId,
+        date: subs[0].instance ? subs[0].instance.date : null,
+        filePath: `/exports/${fname}`,
+        rowCount: rows.length,
+        createdById: operatorId,
+      } as any,
+    });
+    return { url: `/exports/${fname}`, rowCount: rows.length };
+  }
+
   // ============ 内部：字段校验 ============
   private validateData(fields: any[], raw: any, extraImages?: string[]) {
     const data: Record<string, any> = {};

@@ -75,6 +75,12 @@ export class TaskController {
     return this.task.exportInstance(id);
   }
 
+  @Post('admin/export/selected')
+  exportSelected(@Body() body: { ids?: number[] }, @Headers('x-admin-key') key: string) {
+    if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
+    return this.task.exportSubmissions(body.ids || []);
+  }
+
   // ===== 会员（需登录 Token） =====
   @UseGuards(JwtAuthGuard)
   @Get('task/templates')

@@ -64,6 +64,23 @@
     .chip { display:inline-block; font-size:12px; color:#6B6256; background:#F3E6C5; border-radius:8px; padding:3px 10px; }
     .tpl-item { margin-bottom:10px; }
     .tpl-item .sub { margin-top:6px; }
+    /* 提交审核：筛选/批量工具条 + 列表 + 详情 */
+    .rev-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .rev-filter { width:auto; min-width:160px; }
+    .rev-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:#FBF4E2; border:1px solid #E2D2A8; border-radius:12px; padding:10px 14px; }
+    .rev-bar .count { font-size:13px; color:#6B6256; margin-right:auto; }
+    .rev-list { display:flex; flex-direction:column; gap:10px; }
+    .rev-row { display:flex; align-items:center; gap:12px; background:#fff; border:1px solid rgba(226,210,168,.45); border-radius:12px; padding:12px 14px; cursor:pointer; transition:border-color .15s ease, box-shadow .15s ease; }
+    .rev-row:hover { border-color:#E2D2A8; box-shadow:0 2px 8px rgba(150,120,50,.06); }
+    .rev-row.sel { border-color:var(--gold); box-shadow:0 0 0 2px rgba(199,161,74,.15); }
+    .rev-check { width:18px; height:18px; accent-color:var(--gold); flex-shrink:0; cursor:pointer; }
+    .rev-main { flex:1; min-width:0; }
+    .rev-top { display:flex; align-items:center; gap:8px; }
+    .rev-id { font-weight:600; color:#2B2620; }
+    .rev-meta { color:#9A9183; font-size:13px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rev-detail .img-grid { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+    .rev-detail .img-grid img { width:88px; height:88px; object-fit:cover; border-radius:8px; border:1px solid #ECE7DC; }
+    .rev-detail .field-rows .kv { border-bottom:1px dashed #ECE7DC; }
     /* 修改会员弹窗 */
     .modal-mask { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; display:flex; align-items:flex-start; justify-content:center; padding:24px 12px; overflow:auto; }
     .modal { background:#fff; width:100%; max-width:480px; border-radius:12px; overflow:hidden; }
@@ -492,51 +509,135 @@ async function publish(){
   catch(e){ toast(e.message); }
 }
 
-/* ===================== 提交审核 ===================== */
+/* ===================== 提交审核（列表 → 详情 + 批量导出） ===================== */
 async function loadReview(){
   const body=$('#pageBody');
   try{ A.instances=await api('GET','/admin/task-instances'); }catch(e){ toast(e.message); }
-  const opts=(A.instances||[]).map(i=>`<option value="${i.id}">${esc(i.title)}（${i.grabbed}/${i.quota}）</option>`).join('');
-  body.innerHTML = `
-    <div class="field"><label>选择任务</label><select id="rInst">${opts||'<option>暂无任务</option>'}</select></div>
-    <div id="rList" class="mt12"></div>`;
-  const sel=body.querySelector('#rInst');
-  if(sel){ sel.onchange=()=>loadSubs(sel.value); if(A.instances.length) loadSubs(A.instances[0].id); }
+  if(!A.selIds) A.selIds=new Set();
+  if(!A.subs) A.subs=[];
+  await fetchSubs();
+  renderReview(body);
 }
-async function loadSubs(instId){
-  A.curInstanceId=+instId;
-  try{ A.subs=await api('GET','/admin/submissions?instanceId='+instId); }catch(e){ toast(e.message); }
-  const box=$('#rList'); if(!box) return;
-  if(!A.subs.length){ box.innerHTML='<div class="card center muted">该任务暂无提交</div>'; return; }
-  box.innerHTML=A.subs.map(s=>{
-    const fields=(s.instance&&s.instance.template&&s.instance.template.fields)||[];
-    const rows=fields.map(f=>{
-      let v=s.data? s.data[f.key]:'';
-      if(f.type==='checkbox') v=v?'是':'否';
-      if(f.type==='image'&&v) v=`<a href="${esc(v)}" target="_blank"><img class="thumb" src="${esc(v)}"></a>`;
-      return `<div class="kv"><span class="k">${esc(f.label)}</span><span class="v">${v===''||v==null?'-':v}</span></div>`;
-    }).join('');
-    const imgMore=(s.images&&s.images.length)?`<div class="mt8">${s.images.map(u=>`<a href="${esc(u)}" target="_blank"><img class="thumb" src="${esc(u)}" style="margin-right:6px"></a>`).join('')}</div>`:'';
-    const actions = s.status==='SUBMITTED'
-      ? `<div style="display:flex;gap:10px;margin-top:10px">
-           <button class="btn sm" data-approve="${s.id}">通过</button>
-           <button class="btn sm danger" data-reject="${s.id}">驳回</button>
-         </div>`
-      : `<div class="sub mt8">${s.status==='REJECTED'&&s.rejectReason?('驳回理由：'+esc(s.rejectReason)):'已处理'}</div>`;
-    return `<div class="card">
-      <div class="title">#${s.id} <span class="tag ${s.status.toLowerCase()}">${SUB_STATUS_CN[s.status]||s.status}</span></div>
-      <div class="sub">会员：${esc(s.user? s.user.email:'')} ｜ ${esc(s.user? s.user.phone:'')}</div>
-      <div class="mt8">${rows||'<div class="muted">（无字段）</div>'}${imgMore}</div>
-      ${actions}
+async function fetchSubs(){
+  const q = A.curInstanceId ? ('?instanceId='+A.curInstanceId) : '';
+  try{ A.subs=await api('GET','/admin/submissions'+q); }catch(e){ toast(e.message); A.subs=[]; }
+}
+function renderReview(body){
+  const subs=A.subs||[];
+  const inOpts = `<option value="">全部任务</option>` + (A.instances||[]).map(i=>
+    `<option value="${i.id}" ${A.curInstanceId===i.id?'selected':''}>${esc(i.title)}（${i.grabbed}/${i.quota}）</option>`).join('');
+  const list = subs.length ? subs.map(revRowHtml).join('') : '<div class="fc-empty">暂无任何提交记录</div>';
+  body.innerHTML = `
+    <div class="tpl-wrap">
+      <div class="tpl-sec">
+        <div class="tpl-sec-title"><span class="tpl-num">1</span>筛选与批量操作</div>
+        <p class="tpl-tip">勾选记录后可一键导出所选任务的完整明细（含提交内容、图片、状态与提交人等全部字段）。点击任意列表项可查看该条提交的完整详情。</p>
+        <div class="rev-toolbar">
+          <select id="rInst" class="rev-filter">${inOpts}</select>
+          <button class="btn sm ghost" id="rRefresh">刷新</button>
+        </div>
+        <div class="rev-bar">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="checkbox" id="rAll" class="rev-check"> 全选
+          </label>
+          <span class="count" id="rCount">已选 0 项</span>
+          <button class="btn sm" id="rExport">导出选中 CSV</button>
+        </div>
+      </div>
+      <div class="tpl-sec" style="margin-top:18px">
+        <div class="tpl-sec-title"><span class="tpl-num">2</span>提交记录 <span class="tpl-count">${subs.length}</span></div>
+        <div class="rev-list" id="rList">${list}</div>
+      </div>
     </div>`;
-  }).join('');
-  box.querySelectorAll('[data-approve]').forEach(b=> b.onclick=()=>review(b.dataset.approve,'approve'));
-  box.querySelectorAll('[data-reject]').forEach(b=> b.onclick=()=>{
-    const note=prompt('请输入驳回理由：','不符合要求'); if(note===null) return; review(b.dataset.reject,'reject',note);
+  const sel=body.querySelector('#rInst');
+  sel.onchange=()=>{ A.curInstanceId = sel.value? +sel.value : null; fetchSubs().then(()=>renderReview(body)); };
+  body.querySelector('#rRefresh').onclick=()=>{ fetchSubs().then(()=>renderReview(body)); };
+  body.querySelector('#rAll').onchange=(e)=>{ const on=e.target.checked; (A.subs||[]).forEach(s=>{ if(on) A.selIds.add(s.id); else A.selIds.delete(s.id); }); renderReview(body); };
+  body.querySelector('#rExport').onclick=exportSelected;
+  $$('#rList .rev-row').forEach(row=>{
+    const id=+row.dataset.id;
+    const cb=row.querySelector('.rev-check');
+    cb.onclick=(e)=>{ e.stopPropagation(); if(cb.checked) A.selIds.add(id); else A.selIds.delete(id); updateCount(); row.classList.toggle('sel',cb.checked); };
+    row.onclick=()=> showDetail(id);
   });
+  updateCount();
+}
+function revRowHtml(s){
+  const sel = A.selIds && A.selIds.has(s.id);
+  const stcn = SUB_STATUS_CN[s.status]||s.status;
+  const stcls = s.status==='APPROVED'?'approved':s.status==='REJECTED'?'rejected':'pending';
+  const time = s.submittedAt ? s.submittedAt.replace('T',' ').slice(0,16) : '—';
+  const member = s.user? s.user.email : '—';
+  const title = s.instance? s.instance.title : '—';
+  return `<div class="rev-row ${sel?'sel':''}" data-id="${s.id}">
+    <input type="checkbox" class="rev-check" ${sel?'checked':''}>
+    <div class="rev-main">
+      <div class="rev-top"><span class="rev-id">#${s.id}</span><span class="tag ${stcls}">${stcn}</span></div>
+      <div class="rev-meta">${esc(title)} ｜ ${esc(member)} ｜ ${esc(time)}</div>
+    </div>
+  </div>`;
+}
+function updateCount(){
+  const el=$('#rCount'); if(el) el.textContent='已选 '+(A.selIds? A.selIds.size:0)+' 项';
+}
+async function showDetail(id){
+  const s=(A.subs||[]).find(x=>x.id===id); const body=$('#pageBody');
+  if(!s){ toast('记录不存在'); return; }
+  const fields=(s.instance&&s.instance.template&&s.instance.template.fields)||[];
+  const rows=fields.map(f=>{
+    let v=s.data? s.data[f.key]:'';
+    if(f.type==='checkbox') v=v?'是':'否';
+    if(f.type==='image'&&v) v=`<a href="${esc(v)}" target="_blank"><img class="thumb" src="${esc(v)}"></a>`;
+    return `<div class="kv"><span class="k">${esc(f.label)}</span><span class="v">${v===''||v==null?'-':v}</span></div>`;
+  }).join('');
+  const imgMore=(s.images&&s.images.length)?`<div class="img-grid mt8">${s.images.map(u=>`<a href="${esc(u)}" target="_blank"><img src="${esc(u)}"></a>`).join('')}</div>`:'';
+  const info=[
+    ['任务标题', s.instance? s.instance.title : '—'],
+    ['模板名称', (s.instance&&s.instance.template)? s.instance.template.name : '—'],
+    ['提交人', s.user? (s.user.email+' ｜ '+s.user.phone):'—'],
+    ['提交时间', s.submittedAt? s.submittedAt.replace('T',' ').slice(0,19):'—'],
+    ['审核时间', s.reviewedAt? s.reviewedAt.replace('T',' ').slice(0,19):'—'],
+  ];
+  const infoHtml=info.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`).join('');
+  const reason = s.status==='REJECTED' && s.rejectReason
+    ? `<div class="kv"><span class="k">驳回理由</span><span class="v" style="color:var(--danger)">${esc(s.rejectReason)}</span></div>` : '';
+  const actions = s.status==='SUBMITTED'
+    ? `<div style="display:flex;gap:10px;margin-top:14px">
+         <button class="btn sm" data-approve="${s.id}">通过</button>
+         <button class="btn sm danger" data-reject="${s.id}">驳回</button>
+       </div>`
+    : `<div class="sub mt8">${s.status==='REJECTED'?'已驳回':'已通过'}</div>`;
+  body.innerHTML = `
+    <div class="tpl-wrap">
+      <div class="tpl-sec rev-detail">
+        <div class="tpl-sec-title">
+          <a href="javascript:;" id="rBack" style="color:var(--gold);text-decoration:none;margin-right:8px">← 返回列表</a>
+          #${s.id} <span class="tag ${s.status==='APPROVED'?'approved':s.status==='REJECTED'?'rejected':'pending'}">${SUB_STATUS_CN[s.status]||s.status}</span>
+        </div>
+        <div class="field-rows mt8">${infoHtml}${reason}</div>
+        <p class="tpl-tip" style="margin:14px 0 8px">提交内容</p>
+        <div class="field-rows">${rows||'<div class="muted">（无字段）</div>'}</div>
+        ${imgMore}
+        ${actions}
+      </div>
+    </div>`;
+  $('#rBack').onclick=()=> loadReview();
+  const ab=body.querySelector('[data-approve]'); if(ab) ab.onclick=()=>review(ab.dataset.approve,'approve');
+  const rj=body.querySelector('[data-reject]'); if(rj) rj.onclick=()=>{
+    const note=prompt('请输入驳回理由：','不符合要求'); if(note===null) return; review(rj.dataset.reject,'reject',note);
+  };
+}
+async function exportSelected(){
+  const ids=[...(A.selIds||[])];
+  if(!ids.length){ toast('请先勾选要导出的记录'); return; }
+  try{
+    const r=await api('POST','/admin/export/selected',{ids});
+    toast('已导出 '+r.rowCount+' 条，正在下载');
+    window.open(r.url,'_blank');
+  }catch(e){ toast(e.message); }
 }
 async function review(id, action, note){
-  try{ await api('POST','/admin/submission/'+id+'/review',{action,note}); toast(action==='approve'?'已通过':'已驳回'); loadSubs(A.curInstanceId); }
+  try{ await api('POST','/admin/submission/'+id+'/review',{action,note}); toast(action==='approve'?'已通过':'已驳回'); loadReview(); }
   catch(e){ toast(e.message); }
 }
 
