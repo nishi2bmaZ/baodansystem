@@ -147,7 +147,135 @@ export class RelationService {
     return { userId, logs };
   }
 
+  /**
+   * 顶层账号（无上级），按注册时间升序。
+   * 用于关系树「从最顶层第一个账号开始展示」。
+   * 每个节点附带直推数量(directCount)与团队总人数(teamTotal, 含自己)。
+   */
+  async getRoots() {
+    const roots = await this.prisma.user.findMany({
+      where: { referrerId: null },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, email: true, phone: true, status: true, depth: true, createdAt: true },
+    });
+    const all = await this.prisma.user.findMany({ select: { id: true, referrerId: true } });
+    const stats = this.computeStats(all);
+    return {
+      roots: roots.map((r) => ({
+        id: r.id, email: r.email, phone: r.phone, status: r.status, depth: r.depth,
+        directCount: stats.get(r.id).directCount,
+        teamTotal: stats.get(r.id).teamTotal,
+        hasChildren: stats.get(r.id).directCount > 0,
+      })),
+    };
+  }
+
+  /**
+   * 查询某账号的直推（直接下级）列表，支持逐层下钻。
+   * 每个下级附带直推数量与团队总人数，以及 hasChildren（是否有下一级）。
+   */
+  async getChildren(userId: number) {
+    const parent = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, path: true } });
+    if (!parent) throw new NotFoundException('用户不存在');
+    const sub = await this.prisma.user.findMany({
+      where: { path: { startsWith: parent.path } },
+      select: { id: true, email: true, phone: true, status: true, depth: true, referrerId: true, createdAt: true },
+    });
+    const stats = this.computeStats(sub);
+    const children = sub
+      .filter((s) => s.referrerId === userId)
+      .map((c) => ({
+        id: c.id, email: c.email, phone: c.phone, status: c.status, depth: c.depth,
+        directCount: stats.get(c.id).directCount,
+        teamTotal: stats.get(c.id).teamTotal,
+        hasChildren: stats.get(c.id).directCount > 0,
+      }));
+    return { parentId: userId, children };
+  }
+
+  /** 单个账号的关系信息：直推数、团队总数、上级链（从顶层到直推）。 */
+  async getNode(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, phone: true, status: true, depth: true, referrerId: true, createdAt: true },
+    });
+    if (!user) throw new NotFoundException('用户不存在');
+    const all = await this.prisma.user.findMany({ select: { id: true, referrerId: true } });
+    const stats = this.computeStats(all);
+    const upline = await this.getUpline(userId);
+    return {
+      node: {
+        id: user.id, email: user.email, phone: user.phone, status: user.status,
+        depth: user.depth, referrerId: user.referrerId,
+        directCount: stats.get(user.id).directCount,
+        teamTotal: stats.get(user.id).teamTotal,
+      },
+      upline: upline.upline,
+    };
+  }
+
+  /** 按邮箱/手机号搜索账号，返回关系信息，便于前端定位到对应节点。 */
+  async searchUsers(q: string) {
+    const kw = (q || '').trim();
+    if (!kw) return { results: [] };
+    const users = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { email: { contains: kw, mode: 'insensitive' } },
+          { phone: { contains: kw } },
+        ],
+      },
+      select: { id: true, email: true, phone: true, status: true, depth: true, referrerId: true },
+      take: 50,
+    });
+    const all = await this.prisma.user.findMany({ select: { id: true, referrerId: true } });
+    const stats = this.computeStats(all);
+    const results = [];
+    for (const u of users) {
+      const up = await this.getUpline(u.id);
+      results.push({
+        id: u.id, email: u.email, phone: u.phone, status: u.status, depth: u.depth,
+        referrerId: u.referrerId,
+        directCount: stats.get(u.id).directCount,
+        teamTotal: stats.get(u.id).teamTotal,
+        upline: up.upline,
+      });
+    }
+    return { results };
+  }
+
   // ---- 内部工具 ----
+
+  /**
+   * 基于 referrerId 计算任意节点集合的直推数量与团队总人数。
+   * 团队总数 = 该节点整棵子树（含自己）的人数。
+   * 用子节点映射 + 记忆化 DFS 计算，复杂度 O(n)。
+   */
+  private computeStats(nodes: any[]): Map<number, { directCount: number; teamTotal: number }> {
+    const childrenMap = new Map<number, number[]>();
+    for (const n of nodes) {
+      if (n.referrerId != null) {
+        if (!childrenMap.has(n.referrerId)) childrenMap.set(n.referrerId, []);
+        childrenMap.get(n.referrerId).push(n.id);
+      }
+    }
+    const memo = new Map<number, number>();
+    const sizeOf = (id: number): number => {
+      if (memo.has(id)) return memo.get(id);
+      let s = 1;
+      for (const c of childrenMap.get(id) || []) s += sizeOf(c);
+      memo.set(id, s);
+      return s;
+    };
+    const stats = new Map<number, { directCount: number; teamTotal: number }>();
+    for (const n of nodes) {
+      stats.set(n.id, {
+        directCount: (childrenMap.get(n.id) || []).length,
+        teamTotal: sizeOf(n.id),
+      });
+    }
+    return stats;
+  }
 
   /** 把扁平节点列表组装成嵌套树（依据 referrerId） */
   private buildTree(nodes: any[]): any[] {

@@ -24,6 +24,21 @@
     .tree { list-style:none; padding-left:18px; margin:6px 0; }
     .tree li { padding:4px 0; font-size:14px; }
     .tree .tag { font-size:12px; margin-right:6px; }
+    .rel-info { background:#eef9f1; border:1px solid #b7e4c7; border-radius:8px; padding:10px 12px; margin-top:8px; }
+    .rel-info .title { font-size:15px; margin-bottom:6px; }
+    .rel-info .kv { display:flex; padding:3px 0; font-size:14px; border-bottom:1px dashed #d8efe0; }
+    .rel-info .kv:last-child { border-bottom:none; }
+    .rel-info .k { width:96px; color:#666; flex-shrink:0; }
+    .rel-info .v { flex:1; word-break:break-all; }
+    .tnode { background:#fff; border:1px solid #ebedf0; border-radius:8px; margin:6px 0; padding:8px 10px; }
+    .tnode.located { border-color:#07c160; box-shadow:0 0 0 2px rgba(7,193,96,.18); }
+    .tnode-head { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:14px; }
+    .tog { cursor:pointer; color:#07c160; font-weight:700; width:16px; text-align:center; user-select:none; }
+    .tog-empty { visibility:hidden; }
+    .temail { font-weight:600; }
+    .tphone { color:#888; font-size:12px; }
+    .tstats { margin-left:auto; color:#07c160; font-size:12px; }
+    .tchildren { margin-top:2px; }
     @media (max-width:768px){
       .sidebar { transform:translateX(-100%); transition:transform .25s; width:190px; }
       .admin.sidebar-open .sidebar { transform:translateX(0); }
@@ -333,31 +348,142 @@ async function review(id, action, note){
   catch(e){ toast(e.message); }
 }
 
-/* ===================== 关系树 ===================== */
+/* ===================== 关系树（交互式下钻 + 搜索定位） ===================== */
+let TR = { roots:[], open:{}, data:{}, located:null };
+
 async function loadRelation(){
   const body=$('#pageBody');
   body.innerHTML = `
     <div class="card">
-      <div class="field"><label>用户ID</label><input type="number" id="rUserId" placeholder="输入会员ID"></div>
-      <button class="btn sm" id="rTreeBtn">查看团队树</button>
+      <div class="field"><label>搜索账号（邮箱或手机号）</label>
+        <div class="row" style="gap:8px">
+          <input type="text" id="relSearch" placeholder="输入关键字，定位账号并展开其关系">
+          <button class="btn sm" id="relSearchBtn">查询</button>
+        </div>
+      </div>
+      <div id="relInfo" class="rel-info" style="display:none"></div>
+      <div id="relSearchOut" class="mt12"></div>
     </div>
-    <div id="rTreeOut" class="mt12"></div>`;
-  body.querySelector('#rTreeBtn').onclick = async ()=>{
-    const id=body.querySelector('#rUserId').value;
-    if(!id){ toast('请输入用户ID'); return; }
-    const out=body.querySelector('#rTreeOut');
-    try{
-      const data=await api('GET','/admin/relation/tree?userId='+id);
-      out.innerHTML = `<div class="sub">团队人数：${data.totalMembers} ｜ 层级：${data.levels}</div>` + renderTree(data.tree);
-    }catch(e){ out.innerHTML='<div class="card center muted">'+esc(e.message)+'</div>'; }
-  };
+    <div class="title" style="font-size:15px;margin:8px 0 4px">团队关系树（从顶层第一个账号开始，点击 ▸ 逐层展开下级）</div>
+    <div id="treeRoot" class="mt12"><div class="card center muted">加载中…</div></div>`;
+  body.querySelector('#relSearchBtn').onclick = doRelSearch;
+  body.querySelector('#relSearch').addEventListener('keydown', e=>{ if(e.key==='Enter') doRelSearch(); });
+  await loadRoots();
 }
-function renderTree(nodes){
-  if(!nodes || !nodes.length) return '<div class="muted">（无下级）</div>';
-  return '<ul class="tree">'+nodes.map(n=>{
-    const st=USER_STATUS_CN[n.status]||n.status;
-    return `<li><span class="tag ${n.status==='ACTIVE'?'approved':n.status==='DISABLED'?'rejected':'pending'}">${st}</span> ${esc(n.email)}（ID:${n.id}）${renderTree(n.children)}</li>`;
-  }).join('')+'</ul>';
+
+async function loadRoots(){
+  const root=$('#treeRoot'); if(!root) return;
+  try{
+    const data=await api('GET','/admin/relation/roots');
+    TR.roots = data.roots||[];
+    TR.open={}; TR.data={}; TR.located=null;
+    if(!TR.roots.length){ root.innerHTML='<div class="card center muted">暂无账号</div>'; return; }
+    renderTree();
+    // 自动展开第一个（最早的顶层）账号，满足"从最顶层第一个账号开始展示"
+    await toggleNode(TR.roots[0].id, true);
+  }catch(e){ root.innerHTML='<div class="card center muted">'+esc(e.message)+'</div>'; }
+}
+
+function renderTree(){
+  const root=$('#treeRoot'); if(!root) return;
+  root.innerHTML = TR.roots.map(n=>renderNode(n,0)).join('');
+  bindTree(root);
+}
+function renderNode(n, level){
+  const st=USER_STATUS_CN[n.status]||n.status;
+  const stCls = n.status==='ACTIVE'?'approved':n.status==='DISABLED'?'rejected':'pending';
+  const isOpen = !!TR.open[n.id];
+  const tog = n.hasChildren ? `<span class="tog" data-toggle="${n.id}">${isOpen?'▾':'▸'}</span>` : `<span class="tog tog-empty">·</span>`;
+  const kids = (isOpen && TR.data[n.id]) ? `<div class="tchildren">${TR.data[n.id].map(c=>renderNode(c,level+1)).join('')}</div>` : '';
+  const isLoc = TR.located===n.id ? ' located':'';
+  return `<div class="tnode${isLoc}" data-id="${n.id}" style="margin-left:${level*18}px">
+    <div class="tnode-head">
+      ${tog}
+      <span class="tag ${stCls}">${st}</span>
+      <span class="temail">${esc(n.email)}</span>
+      <span class="tphone">${esc(n.phone)}</span>
+      <span class="tstats">直推 ${n.directCount} ｜ 团队 ${n.teamTotal}</span>
+    </div>
+    ${kids}
+  </div>`;
+}
+function bindTree(scope){
+  scope.querySelectorAll('[data-toggle]').forEach(t=>{
+    t.onclick = ()=> toggleNode(+t.dataset.toggle);
+  });
+}
+async function toggleNode(id, forceOpen){
+  if(TR.open[id] && !forceOpen){ TR.open[id]=false; renderTree(); return; }
+  TR.open[id]=true;
+  if(!TR.data[id]){
+    try{
+      const d=await api('GET','/admin/relation/children?userId='+id);
+      TR.data[id] = d.children||[];
+    }catch(e){ toast(e.message); TR.open[id]=false; return; }
+  }
+  renderTree();
+}
+
+async function doRelSearch(){
+  const q=$('#relSearch').value.trim();
+  const out=$('#relSearchOut');
+  if(!q){ out.innerHTML=''; return; }
+  try{
+    const d=await api('GET','/admin/relation/search?q='+encodeURIComponent(q));
+    const rs=d.results||[];
+    if(!rs.length){ out.innerHTML='<div class="card center muted">未找到匹配账号</div>'; return; }
+    out.innerHTML = rs.map(r=>{
+      const st=USER_STATUS_CN[r.status]||r.status;
+      const stCls = r.status==='ACTIVE'?'approved':r.status==='DISABLED'?'rejected':'pending';
+      return `<div class="card">
+        <div class="title">${esc(r.email)} <span class="tag ${stCls}">${st}</span></div>
+        <div class="sub">手机：${esc(r.phone)} ｜ 层级 ${r.depth} ｜ 直推 ${r.directCount} ｜ 团队 ${r.teamTotal}</div>
+        <div class="row" style="margin-top:8px;gap:8px">
+          <button class="btn sm" data-locate="${r.id}">定位并展开</button>
+          <button class="btn sm ghost" data-detail="${r.id}">查看关系信息</button>
+        </div>
+      </div>`;
+    }).join('');
+    out.querySelectorAll('[data-locate]').forEach(b=> b.onclick=()=>locateNode(+b.dataset.locate));
+    out.querySelectorAll('[data-detail]').forEach(b=> b.onclick=()=>showRelInfo(+b.dataset.detail));
+  }catch(e){ out.innerHTML='<div class="card center muted">'+esc(e.message)+'</div>'; }
+}
+
+async function locateNode(id){
+  let info;
+  try{ info=await api('GET','/admin/relation/node/'+id); }catch(e){ toast(e.message); return; }
+  const path = [...(info.upline||[]).map(u=>u.id), info.node.id];
+  for(const pid of path){
+    if(!TR.data[pid]){
+      try{ const d=await api('GET','/admin/relation/children?userId='+pid); TR.data[pid]=d.children||[]; }
+      catch(e){ break; }
+    }
+    TR.open[pid]=true;
+  }
+  TR.located=id;
+  renderTree();
+  showRelInfoFromNode(info);
+  setTimeout(()=>{ const el=document.querySelector('.tnode.located'); if(el) el.scrollIntoView({behavior:'smooth',block:'center'}); }, 60);
+}
+
+async function showRelInfo(id){
+  let info;
+  try{ info=await api('GET','/admin/relation/node/'+id); }catch(e){ toast(e.message); return; }
+  showRelInfoFromNode(info);
+}
+function showRelInfoFromNode(info){
+  const box=$('#relInfo'); if(!box) return;
+  const n=info.node;
+  const up=(info.upline||[]).map(u=>esc(u.email)+' (#'+u.id+')').join(' → ') || '（顶层账号，无上级）';
+  box.style.display='block';
+  box.innerHTML = `
+    <div class="title">关系信息：${esc(n.email)} <span class="tag ${n.status==='ACTIVE'?'approved':n.status==='DISABLED'?'rejected':'pending'}">${USER_STATUS_CN[n.status]||n.status}</span></div>
+    <div class="kv"><span class="k">账号ID</span><span class="v">${n.id}</span></div>
+    <div class="kv"><span class="k">手机号</span><span class="v">${esc(n.phone)}</span></div>
+    <div class="kv"><span class="k">层级(深度)</span><span class="v">${n.depth}</span></div>
+    <div class="kv"><span class="k">直推数量</span><span class="v">${n.directCount}</span></div>
+    <div class="kv"><span class="k">团队总人数</span><span class="v">${n.teamTotal}</span></div>
+    <div class="kv"><span class="k">上级链</span><span class="v">${up}</span></div>`;
 }
 
 /* ===================== 启动 ===================== */

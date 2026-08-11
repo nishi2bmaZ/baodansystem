@@ -25,6 +25,34 @@ export class RelationController {
     return this.relation.getTeam(parseInt(userId, 10));
   }
 
+  /** 后台：顶层账号列表（关系树入口，按注册时间升序） */
+  @Get('admin/relation/roots')
+  getRoots(@Headers('x-admin-key') key: string) {
+    if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
+    return this.relation.getRoots();
+  }
+
+  /** 后台：某账号的直推（直接下级）列表，用于逐层下钻 */
+  @Get('admin/relation/children')
+  getChildren(@Query('userId') userId: string, @Headers('x-admin-key') key: string) {
+    if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
+    return this.relation.getChildren(parseInt(userId, 10));
+  }
+
+  /** 后台：单个账号的关系信息（直推数、团队总数、上级链） */
+  @Get('admin/relation/node/:userId')
+  getNode(@Param('userId') userId: string, @Headers('x-admin-key') key: string) {
+    if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
+    return this.relation.getNode(parseInt(userId, 10));
+  }
+
+  /** 后台：按邮箱/手机号搜索账号，返回关系信息用于定位 */
+  @Get('admin/relation/search')
+  search(@Query('q') q: string, @Headers('x-admin-key') key: string) {
+    if (key !== process.env.ADMIN_KEY) throw new UnauthorizedException('无权操作');
+    return this.relation.searchUsers(q);
+  }
+
   /** 后台：查看某用户的上级链 */
   @Get('admin/relation/upline/:userId')
   getUpline(@Param('userId') userId: string, @Headers('x-admin-key') key: string) {
