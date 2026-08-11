@@ -15,7 +15,7 @@ services:
       APP_PORT: "3000"
       JWT_SECRET: ${JWT_SECRET:-change-me-in-prod}
       ADMIN_KEY: ${ADMIN_KEY:-admin123}
-      PUBLIC_BASE: ${PUBLIC_BASE:-}
+      PUBLIC_BASE: ${PUBLIC_BASE:-https://bd.weilaiyilai.cn}
     depends_on:
       - db
       - redis
