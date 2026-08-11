@@ -16,6 +16,9 @@ async function bootstrap() {
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
   app.useStaticAssets(join(process.cwd(), 'exports'), { prefix: '/exports' });
 
+  // 前端 H5 静态页面（首页 index.html / 会员端 member.html / 后台 admin.html）
+  app.useStaticAssets(join(process.cwd(), 'public'));
+
   const port = parseInt(process.env.APP_PORT || '3000', 10);
   await app.listen(port, '0.0.0.0');
   console.log(`[启动] 团队任务报单系统后端已启动，监听端口 ${port}`);

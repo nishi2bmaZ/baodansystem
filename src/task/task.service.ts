@@ -326,7 +326,15 @@ export class TaskService {
       reviewedAt: s.reviewedAt,
       rejectReason: s.rejectReason,
       user: s.user ? { id: s.user.id, email: s.user.email, phone: s.user.phone } : undefined,
-      instance: s.instance ? { id: s.instance.id, title: s.instance.title } : undefined,
+      instance: s.instance
+        ? {
+            id: s.instance.id,
+            title: s.instance.title,
+            template: s.instance.template
+              ? { id: s.instance.template.id, name: s.instance.template.name, fields: JSON.parse(s.instance.template.schemaJson) }
+              : null,
+          }
+        : undefined,
     };
   }
 

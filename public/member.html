@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>会员端 · 团队任务报单</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="topbar" id="topbar"><span id="topTitle">会员端</span></div>
+  <div id="app" class="wrap"></div>
+  <div class="tabbar hide" id="tabbar">
+    <div class="tab active" data-view="tasks"><span class="ic">📋</span>任务</div>
+    <div class="tab" data-view="mine"><span class="ic">📂</span>我的</div>
+    <div class="tab" data-view="logout"><span class="ic">🚪</span>退出</div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ===================== 基础工具 ===================== */
+const TOKEN_KEY = 'bd_member_token';
+const STATUS_CN = { GRABBED:'已抢单', SUBMITTED:'待审核', APPROVED:'通过', REJECTED:'驳回' };
+const TYPE_CN = { text:'文本', number:'数字', image:'图片', dropdown:'下拉', date:'日期', checkbox:'勾选' };
+
+let S = { view:'auth', mode:'login', instances:[], curInst:null, curSub:null, mine:[], formMode:'new', values:{} };
+
+const $ = (s, r=document) => r.querySelector(s);
+function getToken(){ return localStorage.getItem(TOKEN_KEY); }
+function setToken(t){ localStorage.setItem(TOKEN_KEY, t); }
+function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+async function api(method, path, body, isForm){
+  const headers = {};
+  const tk = getToken(); if (tk) headers['Authorization'] = 'Bearer ' + tk;
+  const opt = { method, headers };
+  if (isForm) opt.body = body;
+  else if (body !== undefined){ headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+  const res = await fetch(path, opt);
+  let data = null;
+  try { data = await res.json(); } catch(e){}
+  if (!res.ok){ throw new Error((data && data.message) || ('请求失败(' + res.status + ')')); }
+  return data;
+}
+async function uploadImage(file){
+  const fd = new FormData(); fd.append('file', file);
+  const d = await api('POST', '/upload', fd, true);
+  return d.url;
+}
+
+/* ===================== 渲染主框架 ===================== */
+function render(){
+  const app = $('#app'), top = $('#topbar'), tab = $('#tabbar');
+  top.querySelector('#topTitle').textContent =
+    ({auth:'会员端', tasks:'可抢任务', mine:'我的提交', taskDetail: S.curInst?S.curInst.title:'任务详情',
+      fill:'填写报单', mineDetail:'提交详情'})[S.view] || '会员端';
+  // 返回按钮
+  let back = top.querySelector('.back');
+  if (['taskDetail','fill','mineDetail'].includes(S.view)){
+    if (!back){ back = document.createElement('span'); back.className='back'; back.textContent='‹ 返回';
+      back.onclick = goBack; top.appendChild(back); }
+    back.style.display='';
+  } else if (back){ back.style.display='none'; }
+
+  if (S.view === 'auth'){ tab.classList.add('hide'); renderAuth(app); return; }
+  tab.classList.remove('hide');
+  if (S.view === 'tasks') renderTasks(app);
+  else if (S.view === 'mine') renderMine(app);
+  else if (S.view === 'taskDetail') renderTaskDetail(app);
+  else if (S.view === 'fill') renderFill(app);
+  else if (S.view === 'mineDetail') renderMineDetail(app);
+  updateTab();
+}
+function updateTab(){
+  const v = S.view==='taskDetail'||S.view==='fill' ? 'tasks' : (S.view==='mineDetail'?'mine':S.view);
+  document.querySelectorAll('#tabbar .tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.view === v || (t.dataset.view==='tasks'&&S.view==='taskDetail')||(t.dataset.view==='tasks'&&S.view==='fill'));
+  });
+}
+function goBack(){
+  if (S.view==='taskDetail'){ S.view='tasks'; loadTasks(); }
+  else if (S.view==='fill'){ S.view='mine'; loadMine(); }
+  else if (S.view==='mineDetail'){ S.view='mine'; loadMine(); }
+  render();
+}
+
+/* ===================== 登录 / 注册 ===================== */
+function renderAuth(app){
+  const reg = S.mode==='register';
+  app.innerHTML = `
+  <div class="auth-box">
+    <div class="logo">团队任务报单</div>
+    <div class="slogan">${reg?'注册新会员':'会员登录'}</div>
+    <div class="card">
+      ${reg?`<div class="field"><label>星际未来邮箱<span class="req">*</span></label>
+        <input type="email" id="email" placeholder="name@star.com"></div>
+        <div class="field"><label>商城手机号<span class="req">*</span></label>
+        <input type="tel" id="phone" placeholder="11位手机号" maxlength="11"></div>
+        <div class="field"><label>密码<span class="req">*</span></label>
+        <input type="text" id="pwd" placeholder="至少6位"></div>
+        <div class="field"><label>邀请码（可选）</label>
+        <input type="text" id="invite" placeholder="有则填写，用于绑定上级"></div>`
+      :`<div class="field"><label>账号（邮箱或手机号）<span class="req">*</span></label>
+        <input type="text" id="ident" placeholder="邮箱或手机号"></div>
+        <div class="field"><label>密码<span class="req">*</span></label>
+        <input type="text" id="pwd" placeholder="密码"></div>`}
+      <button class="btn" id="submitBtn">${reg?'注册并提交审核':'登录'}</button>
+    </div>
+    <div class="switch-line" id="switch">${reg?'已有账号？去登录':'还没有账号？去注册'}</div>
+  </div>`;
+  $('#switch').onclick = ()=>{ S.mode = reg?'login':'register'; render(); };
+  $('#submitBtn').onclick = reg? doRegister : doLogin;
+}
+async function doRegister(){
+  const email=$('#email').value.trim(), phone=$('#phone').value.trim(),
+        password=$('#pwd').value, invite=$('#invite').value.trim();
+  if(!email||!phone||!password){ toast('请填写邮箱、手机号和密码'); return; }
+  if(!/^\S+@\S+\.\S+$/.test(email)){ toast('邮箱格式不正确'); return; }
+  if(!/^\d{11}$/.test(phone)){ toast('手机号需11位'); return; }
+  if(password.length<6){ toast('密码至少6位'); return; }
+  try{
+    await api('POST','/auth/register',{email,phone,password,inviteCode:invite||undefined});
+    toast('注册成功，请等待客服审核激活');
+    S.mode='login'; render();
+  }catch(e){ toast(e.message); }
+}
+async function doLogin(){
+  const identifier=$('#ident').value.trim(), password=$('#pwd').value;
+  if(!identifier||!password){ toast('请输入账号和密码'); return; }
+  try{
+    const d = await api('POST','/auth/login',{identifier,password});
+    setToken(d.token);
+    S.view='tasks'; loadTasks();
+  }catch(e){ toast(e.message); }
+}
+
+/* ===================== 任务列表 ===================== */
+async function loadTasks(){
+  try{
+    S.instances = await api('GET','/task/instances');
+    // 把"我的"里已抢的提交映射到任务，便于显示"去填写"
+    const mine = await api('GET','/task/my-submissions');
+    S.mine = mine;
+    render();
+  }catch(e){ toast(e.message); }
+}
+function renderTasks(app){
+  if(!S.instances.length){
+    app.innerHTML = `<div class="card center muted">暂无可抢任务</div>`; return;
+  }
+  const cards = S.instances.map(i=>{
+    const left = i.quota - i.grabbed;
+    const pct = Math.min(100, Math.round(i.grabbed/i.quota*100));
+    // 是否已抢该任务
+    const mySub = S.mine.find(m=>m.instanceId===i.id);
+    const btn = mySub
+      ? `<button class="btn sm" data-edit="${mySub.id}">${mySub.status==='GRABBED'?'去填写':'查看/重填'}</button>`
+      : `<button class="btn sm" data-grab="${i.id}">抢单（剩${left}）</button>`;
+    return `<div class="card">
+      <div class="title">${esc(i.title)}</div>
+      <div class="sub">日期：${esc((i.date||'').slice(0,10))} ｜ 模板：${esc(i.template?i.template.name:'')}</div>
+      <div class="progress mt8"><span style="width:${pct}%"></span></div>
+      <div class="sub mt8">名额 ${i.grabbed}/${i.quota}　${left>0?'':'已抢满'}</div>
+      <div class="mt12" style="text-align:right">${btn}</div>
+    </div>`;
+  }).join('');
+  app.innerHTML = cards;
+  app.querySelectorAll('[data-grab]').forEach(b=> b.onclick=()=>grab(b.dataset.grab));
+  app.querySelectorAll('[data-edit]').forEach(b=> b.onclick=()=>openMine(b.dataset.edit));
+}
+async function grab(id){
+  try{
+    const d = await api('POST', `/task/instance/${id}/grab`);
+    toast('抢单成功，请填写报单');
+    S.curSub = { id:d.submissionId, instanceId:id, status:'GRABBED', data:{}, images:[] };
+    S.formMode='new'; S.values={};
+    await loadTaskDetail(id);
+    S.view='fill'; render();
+  }catch(e){ toast(e.message); }
+}
+
+/* ===================== 任务详情 ===================== */
+async function loadTaskDetail(id){
+  S.curInst = S.instances.find(i=>i.id==id) || S.curInst;
+  if(!S.curInst) S.curInst = (await api('GET','/task/instances')).find(i=>i.id==id);
+  render();
+}
+function renderTaskDetail(app){
+  const i = S.curInst; if(!i){ app.innerHTML='<div class="card">加载中…</div>'; return; }
+  const fields = (i.template&&i.template.fields||[]).map(f=>
+    `<div class="kv"><span class="k">${esc(f.label)}</span><span class="v">${TYPE_CN[f.type]||f.type}${f.required?'（必填）':''}</span></div>`
+  ).join('');
+  app.innerHTML = `
+    <div class="card">
+      <div class="title">${esc(i.title)}</div>
+      <div class="sub">日期：${esc((i.date||'').slice(0,10))}</div>
+      <div class="sub mt8">名额：${i.grabbed}/${i.quota}</div>
+    </div>
+    <div class="card">
+      <div class="title" style="font-size:15px">报单字段</div>
+      ${fields || '<div class="muted">（无字段）</div>'}
+    </div>
+    <button class="btn" id="doGrab">抢单并填写</button>`;
+  $('#doGrab').onclick = ()=>grab(i.id);
+}
+
+/* ===================== 填写报单 ===================== */
+function renderFill(app){
+  const sub = S.curSub, inst = S.curInst;
+  if(!sub||!inst){ app.innerHTML='<div class="card">数据缺失</div>'; return; }
+  const fields = inst.template.fields||[];
+  let html = `<div class="card"><div class="title" style="font-size:15px">${esc(inst.title)}</div>
+    <div class="sub">请按模板填写</div></div>`;
+  fields.forEach(f=>{
+    const val = S.values[f.key];
+    let ctrl='';
+    if(f.type==='text') ctrl=`<input type="text" data-key="${f.key}" value="${esc(val||'')}" placeholder="${esc(f.placeholder||'')}">`;
+    else if(f.type==='number') ctrl=`<input type="number" data-key="${f.key}" value="${val!=null?val:''}" placeholder="${esc(f.placeholder||'')}">`;
+    else if(f.type==='date') ctrl=`<input type="date" data-key="${f.key}" value="${esc(val||'')}">`;
+    else if(f.type==='dropdown') ctrl=`<select data-key="${f.key}"><option value="">请选择</option>${
+        (f.options||[]).map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+    else if(f.type==='checkbox') ctrl=`<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-key="${f.key}" ${val?'checked':''}> 是</label>`;
+    else if(f.type==='image') ctrl=`<div><input type="file" accept="image/*" data-img="${f.key}" style="font-size:13px">
+      <div class="mt8" data-prev="${f.key}">${val?`<img class="img-prev" src="${esc(val)}">`:''}</div></div>`;
+    html += `<div class="field"><label>${esc(f.label)}${f.required?'<span class="req">*</span>':''}</label>${ctrl}</div>`;
+  });
+  html += `<button class="btn" id="submitForm">提交报单</button>`;
+  app.innerHTML = html;
+
+  // 绑定图片上传
+  app.querySelectorAll('[data-img]').forEach(inp=>{
+    inp.onchange = async ()=>{
+      const file = inp.files[0]; if(!file) return;
+      const key = inp.dataset.img;
+      toast('上传中…');
+      try{
+        const url = await uploadImage(file);
+        S.values[key] = url;
+        const prev = app.querySelector(`[data-prev="${key}"]`);
+        prev.innerHTML = `<img class="img-prev" src="${esc(url)}">`;
+      }catch(e){ toast(e.message); }
+    };
+  });
+  $('#submitForm').onclick = submitForm;
+}
+function collectForm(){
+  const inst = S.curInst; const data = {};
+  inst.template.fields.forEach(f=>{
+    let v;
+    if(f.type==='checkbox') v = !!$('#app').querySelector(`[data-key="${f.key}"]`).checked;
+    else if(f.type==='image') v = S.values[f.key] || '';
+    else v = $('#app').querySelector(`[data-key="${f.key}"]`).value;
+    if(f.type==='number' && v!=='') v = Number(v);
+    data[f.key] = v;
+  });
+  return data;
+}
+async function submitForm(){
+  // 必填校验
+  const fields = S.curInst.template.fields;
+  const data = collectForm();
+  for(const f of fields){
+    const v = data[f.key];
+    if(f.required && (v===undefined||v===null||v==='')){ toast(`「${f.label}」为必填项`); return; }
+  }
+  try{
+    await api('POST', `/task/submission/${S.curSub.id}/submit`, { data });
+    toast('提交成功，等待审核');
+    S.view='mine'; loadMine();
+  }catch(e){ toast(e.message); }
+}
+
+/* ===================== 我的提交 ===================== */
+async function loadMine(){
+  try{ S.mine = await api('GET','/task/my-submissions'); render(); }
+  catch(e){ toast(e.message); }
+}
+function renderMine(app){
+  if(!S.mine.length){ app.innerHTML='<div class="card center muted">暂无提交记录</div>'; return; }
+  const items = S.mine.map(s=>`
+    <div class="list"><div class="item" data-id="${s.id}">
+      <div class="l"><div class="t">${esc(s.instance? s.instance.title : '任务')}</div>
+        <div class="d">#${s.id} · ${(s.submittedAt||'').slice(0,16).replace('T',' ') || '未提交'}</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="tag ${s.status.toLowerCase()}">${STATUS_CN[s.status]||s.status}</span>
+        <span style="color:#bbb">›</span>
+      </div>
+    </div></div>`).join('');
+  app.innerHTML = items;
+  app.querySelectorAll('[data-id]').forEach(i=> i.onclick=()=>openMine(i.dataset.id));
+}
+function openMine(id){
+  S.curSub = S.mine.find(m=>m.id==id);
+  if(!S.curSub) return;
+  // 后端已在 submission 里带全 instance（含 template.fields），直接本地组装，不依赖任务是否仍开启
+  const inst = S.curSub.instance || {};
+  S.curInst = { id: inst.id, title: inst.title, template: inst.template || { fields: [] } };
+  S.view='mineDetail'; render();
+}
+function renderMineDetail(app){
+  const s = S.curSub; if(!s){ app.innerHTML='<div class="card">加载中…</div>'; return; }
+  const fields = (S.curInst&&S.curInst.template&&S.curInst.template.fields)||[];
+  const rows = fields.map(f=>{
+    let v = s.data? s.data[f.key] : '';
+    if(f.type==='checkbox') v = v? '是':'否';
+    if(f.type==='image' && v) v = `<a href="${esc(v)}" target="_blank"><img class="thumb" src="${esc(v)}"></a>`;
+    return `<div class="kv"><span class="k">${esc(f.label)}</span><span class="v">${v===''||v==null?'-':v}</span></div>`;
+  }).join('');
+  const canEdit = s.status==='REJECTED' || s.status==='GRABBED';
+  app.innerHTML = `
+    <div class="card">
+      <div class="title">${esc(s.instance?s.instance.title:'任务')}</div>
+      <div class="sub">状态：<span class="tag ${s.status.toLowerCase()}">${STATUS_CN[s.status]||s.status}</span></div>
+      ${s.status==='REJECTED'&&s.rejectReason?`<div class="sub mt8" style="color:#ee0a24">驳回理由：${esc(s.rejectReason)}</div>`:''}
+    </div>
+    <div class="card">
+      <div class="title" style="font-size:15px">报单内容</div>
+      ${rows || '<div class="muted">（无内容）</div>'}
+      ${(s.images&&s.images.length)?`<div class="mt8">${s.images.map(u=>`<a href="${esc(u)}" target="_blank"><img class="thumb" src="${esc(u)}" style="margin-right:6px"></a>`).join('')}</div>`:''}
+    </div>
+    ${canEdit?`<button class="btn" id="reFill">${s.status==='GRABBED'?'去填写':'重新填写'}</button>`:''}
+    ${s.status==='REJECTED'?`<div class="card center muted">驳回后可修改内容重新提交</div>`:''}`;
+  if(canEdit){
+    $('#reFill').onclick = ()=>{
+      S.formMode='edit'; S.values = Object.assign({}, s.data||{});
+      S.view='fill'; render();
+    };
+  }
+}
+
+/* ===================== 退出 ===================== */
+function doLogout(){
+  clearToken(); S = { view:'auth', mode:'login', instances:[], curInst:null, curSub:null, mine:[], formMode:'new', values:{} };
+  render();
+}
+
+/* ===================== 启动 ===================== */
+document.querySelectorAll('#tabbar .tab').forEach(t=>{
+  t.onclick = ()=>{
+    const v = t.dataset.view;
+    if(v==='logout'){ doLogout(); return; }
+    if(v==='tasks'){ S.view='tasks'; loadTasks(); }
+    else if(v==='mine'){ S.view='mine'; loadMine(); }
+  };
+});
+// 初始路由
+if(getToken()){ S.view='tasks'; loadTasks(); } else { S.view='auth'; render(); }
+</script>
+</body>
+</html>
