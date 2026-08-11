@@ -443,24 +443,44 @@ async function loadPublish(){
   const body=$('#pageBody');
   try{ A.templates=await api('GET','/admin/task-templates'); A.instances=await api('GET','/admin/task-instances'); }catch(e){ toast(e.message); }
   const opts=(A.templates||[]).map(t=>`<option value="${t.id}">${esc(t.name)}（${t.status==='PUBLISHED'?'已发布':'草稿'}）</option>`).join('');
-  const list=(A.instances||[]).map(i=>`
-    <div class="card">
-      <div class="title">${esc(i.title)}</div>
-      <div class="sub">日期：${esc((i.date||'').slice(0,10))} ｜ 名额 ${i.grabbed}/${i.quota} ｜ 状态 ${i.status}</div>
-    </div>`).join('');
+  const INST_STATUS_CN={ OPEN:'进行中', PENDING:'待开始', CLOSED:'已结束' };
+  const list=(A.instances||[]).map(i=>{
+    const tpl=i.template? i.template.name : '-';
+    const stcn=INST_STATUS_CN[i.status]||i.status;
+    const stcls=i.status==='OPEN'?'approved':i.status==='PENDING'?'pending':'rejected';
+    return `<div class="field-card tpl-item">
+      <div class="tpl-sec-title" style="margin-bottom:6px">${esc(i.title)} <span class="tag ${stcls}">${stcn}</span></div>
+      <div class="sub">日期：${esc((i.date||'').slice(0,10))} ｜ 名额 ${i.grabbed}/${i.quota}</div>
+      <div class="tpl-chips"><span class="chip">模板 · ${esc(tpl)}</span></div>
+    </div>`;
+  }).join('');
   body.innerHTML = `
-    <div class="card">
-      <div class="title">发布任务</div>
-      <div class="field"><label>选择模板<span class="req">*</span></label><select id="pTpl">${opts||'<option>（请先建模板）</option>'}</select></div>
-      <div class="field"><label>任务标题<span class="req">*</span></label><input type="text" id="pTitle" placeholder="如：8月11日外呼任务"></div>
-      <div class="field"><label>任务日期<span class="req">*</span></label><input type="date" id="pDate"></div>
-      <div class="field"><label>名额（总槽位）<span class="req">*</span></label><input type="number" id="pQuota" value="10"></div>
-      <div class="field"><label>开始时间</label><input type="datetime-local" id="pStart"></div>
-      <div class="field"><label>结束时间</label><input type="datetime-local" id="pEnd"></div>
-      <button class="btn" id="pubBtn">发布</button>
-    </div>
-    <div class="title" style="font-size:15px;margin:4px 0">已发布任务</div>
-    ${list||'<div class="card center muted">暂无任务</div>'}`;
+    <div class="tpl-wrap">
+      <div class="tpl-sec">
+        <div class="tpl-sec-title"><span class="tpl-num">1</span>基本信息</div>
+        <p class="tpl-tip">发布一个任务即开启一轮报单。选择模板定义收集内容，填写标题与日期后，会员端即可看到并抢单提交。</p>
+        <div class="field"><label>选择模板<span class="req">*</span></label><select id="pTpl">${opts||'<option>（请先建模板）</option>'}</select></div>
+        <div class="field"><label>任务标题<span class="req">*</span></label><input type="text" id="pTitle" placeholder="如：8月11日外呼任务"></div>
+        <div class="field"><label>任务日期<span class="req">*</span></label><input type="date" id="pDate"></div>
+      </div>
+      <div class="tpl-sec">
+        <div class="tpl-sec-title"><span class="tpl-num">2</span>名额与时间</div>
+        <p class="tpl-tip">名额为该任务可抢的槽位总数；开始 / 结束时间留空时，默认取任务日期当天 0:00–24:00。</p>
+        <div class="fc-grid">
+          <div class="field"><label>名额（总槽位）<span class="req">*</span></label><input type="number" id="pQuota" value="10"></div>
+          <div class="field"><label>开始时间</label><input type="datetime-local" id="pStart"></div>
+        </div>
+        <div class="fc-grid">
+          <div class="field"><label>结束时间</label><input type="datetime-local" id="pEnd"></div>
+          <div></div>
+        </div>
+        <button class="btn mt12" id="pubBtn">发布任务</button>
+      </div>
+      <div class="tpl-sec" style="margin-top:18px">
+        <div class="tpl-sec-title"><span class="tpl-num">3</span>已发布任务 <span class="tpl-count">${(A.instances||[]).length}</span></div>
+        ${list||'<div class="fc-empty">还没有发布任何任务，在上方填写后点击「发布任务」。</div>'}
+      </div>
+    </div>`;
   const pb=body.querySelector('#pubBtn'); if(pb) pb.onclick=publish;
 }
 async function publish(){
