@@ -147,6 +147,9 @@ function autoResize(ta){
   ta.style.height = 'auto';
   ta.style.height = ta.scrollHeight + 'px';
 }
+function normalizeContent(s){
+  return String(s==null?'').replace(/\r\n/g,'\n').replace(/[ \t]+$/gm,'').replace(/^\n+|\n+$/g,'').replace(/\n{3,}/g,'\n\n');
+}
 function bindAutoResize(root){
   root.querySelectorAll('textarea.auto-height').forEach(ta=>{
     ta.addEventListener('input', ()=>autoResize(ta));
@@ -722,7 +725,10 @@ async function showDetail(id){
       if(f.type==='image'&&v) v=`<a href="${esc(v)}" target="_blank"><img class="thumb" src="${esc(v)}"></a>`;
       return `<div class="kv"><span class="k">${esc(f.label)}</span><span class="v">${v===''||v==null?'-':v}</span></div>`;
     }).join('');
-    const steps=(st.steps||[]).map(stp=>`<div class="step"><div class="label">${esc(stp.label)}</div>${stp.content?`<div class="content">${esc(stp.content)}</div>`:''}${stp.image?`<div class="step-img"><img src="${esc(stp.image)}" alt="参考图"></div>`:''}${stp.copyable?`<button class="copy-btn" data-copy="${esc(stp.content||'')}">📋 一键复制</button>`:''}</div>`).join('');
+    const steps=(st.steps||[]).map(stp=>{
+      const clean=normalizeContent(stp.content);
+      return `<div class="step"><div class="label">${esc(stp.label)}</div>${clean?`<div class="content">${esc(clean)}</div>`:''}${stp.image?`<div class="step-img"><img src="${esc(stp.image)}" alt="参考图"></div>`:''}${stp.copyable?`<button class="copy-btn" data-copy="${esc(clean)}">📋 一键复制</button>`:''}</div>`;
+    }).join('');
     const isCur = !completed && idx===barIdx;
     return `<div class="card" style="margin-bottom:12px">
       <div class="title" style="font-size:15px">第 ${idx+1} 阶段 · ${esc(st.title)}${isCur?' <span class="tag pending">当前</span>':''}</div>

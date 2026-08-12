@@ -252,7 +252,8 @@ body {
 .steps-box .step:last-child { border-bottom: none; }
 .steps-box .step .label { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 3px; }
 .steps-box .step .content { font-size: 13px; color: var(--ink); white-space: pre-wrap; word-break: break-all;
-  background: #fff; border-radius: 8px; padding: 7px 10px; border: 1px solid var(--line); margin-bottom: 6px; }
+  background: #fff; border-radius: 8px; padding: 7px 10px; border: 1px solid var(--line); margin-bottom: 6px;
+  min-height: 0; height: auto; line-height: 1.55; }
 .steps-box .step .copy-btn { font-size: 12px; padding: 4px 12px; border-radius: 8px; border: 1px solid var(--gold-border);
   background: #fff; color: var(--gold-strong); cursor: pointer; transition: background .15s ease; }
 .steps-box .step .copy-btn:active { background: var(--gold-soft); }

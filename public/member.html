@@ -30,6 +30,9 @@ function setToken(t){ localStorage.setItem(TOKEN_KEY, t); }
 function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function normalizeContent(s){
+  return String(s==null?'').replace(/\r\n/g,'\n').replace(/[ \t]+$/gm,'').replace(/^\n+|\n+$/g,'').replace(/\n{3,}/g,'\n\n');
+}
 function toast(msg){
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), 1800);
@@ -257,11 +260,14 @@ function renderFill(app){
   const steps = stage.steps||[];
   if(steps.length){
     html += `<div class="steps-box"><div class="h">📌 参考操作步骤</div>` +
-      steps.map(s=>`<div class="step"><div class="label">${esc(s.label)}</div>` +
-        (s.content?`<div class="content">${esc(s.content)}</div>`:'') +
+      steps.map(s=>{
+        const clean = normalizeContent(s.content);
+        return `<div class="step"><div class="label">${esc(s.label)}</div>` +
+        (clean?`<div class="content">${esc(clean)}</div>`:'') +
         (s.image?`<div class="step-img"><img src="${esc(s.image)}" alt="参考图"></div>`:'') +
-        (s.copyable?`<button class="copy-btn" data-copy="${esc(s.content||'')}">📋 一键复制</button>`:'') +
-      `</div>`).join('') + `</div>`;
+        (s.copyable?`<button class="copy-btn" data-copy="${esc(clean)}">📋 一键复制</button>`:'') +
+      `</div>`;
+      }).join('') + `</div>`;
   }
 
   html += `<div class="card"><div class="title" style="font-size:15px">填写内容</div>`;
