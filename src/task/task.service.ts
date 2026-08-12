@@ -70,6 +70,7 @@ export class TaskService {
               label: String(s.label),
               content: String(s.content || ''),
               copyable: !!s.copyable,
+              image: s.image ? String(s.image) : null,
             }))
         : [];
       return { title: st.title.trim(), fields, steps };

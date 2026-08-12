@@ -255,6 +255,14 @@ body {
 .steps-box .step .copy-btn { font-size: 12px; padding: 4px 12px; border-radius: 8px; border: 1px solid var(--gold-border);
   background: #fff; color: var(--gold-strong); cursor: pointer; transition: background .15s ease; }
 .steps-box .step .copy-btn:active { background: var(--gold-soft); }
+.steps-box .step .step-img { margin: 6px 0; }
+.steps-box .step .step-img img { display: block; max-width: 100%; width: auto; max-height: 260px;
+  border-radius: 10px; border: 1px solid var(--gold-border); background: #fff; }
+/* 后台步骤参考图预览（模板编辑器内） */
+.step-img-prev { position: relative; display: inline-block; margin-top: 6px; }
+.step-img-prev img { display: block; max-width: 140px; max-height: 140px; border-radius: 8px; border: 1px solid var(--gold-border); }
+.step-img-del { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%;
+  border: none; background: #E23A3A; color: #fff; font-size: 13px; line-height: 1; cursor: pointer; }
 .stage-title-tag { display: inline-block; font-size: 12px; font-weight: 600; color: var(--gold-strong);
   background: var(--gold-light); border: 1px solid var(--gold-border); border-radius: 10px; padding: 2px 10px; margin-bottom: 8px; }
 .desc-box { background: var(--gold-light); border: 1px solid var(--gold-border); border-radius: var(--radius-md);

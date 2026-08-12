@@ -29,7 +29,7 @@ export class FieldDefDto {
   placeholder?: string;
 }
 
-/** 单个参考操作步骤（如充值地址），copyable=true 时会员端提供一键复制 */
+/** 单个参考操作步骤（如充值地址），copyable=true 时会员端提供一键复制；image 为可选参考图 */
 export class StepDto {
   @IsString()
   label: string;
@@ -41,6 +41,10 @@ export class StepDto {
   @IsOptional()
   @IsBoolean()
   copyable?: boolean;
+
+  @IsOptional()
+  @IsString()
+  image?: string;
 }
 
 /** 任务的一个阶段：含标题、填报字段、参考步骤 */

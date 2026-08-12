@@ -113,7 +113,7 @@ const SUB_STATUS_CN = { GRABBED:'已抢单', SUBMITTED:'待审核', COMPLETED:'�
 const TYPE_CN = { text:'文本', number:'数字', image:'图片', dropdown:'下拉', date:'日期', checkbox:'勾选' };
 const MENU_TITLE = { members:'会员管理', templates:'模板配置', publish:'任务发布', review:'提交审核', relation:'关系树' };
 let A = { view:'login', menu:'members', templates:[], instances:[], subs:[], curInstanceId:null,
-          newStages:[{ title:'', fields:[{key:'',label:'',type:'text',required:false,options:''}], steps:[{label:'',content:'',copyable:false}] }] };
+          newStages:[{ title:'', fields:[{key:'',label:'',type:'text',required:false,options:''}], steps:[{label:'',content:'',copyable:false,image:null}] }] };
 
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
@@ -369,9 +369,9 @@ async function saveReferrer(){
 }
 
 /* ===================== 模板配置（多阶段） ===================== */
-function newStage(){ return { title:'', fields:[{key:'',label:'',type:'text',required:false,options:''}], steps:[{label:'',content:'',copyable:false}] }; }
+function newStage(){ return { title:'', fields:[{key:'',label:'',type:'text',required:false,options:''}], steps:[{label:'',content:'',copyable:false,image:null}] }; }
 function newField(){ return {key:'',label:'',type:'text',required:false,options:''}; }
-function newStep(){ return {label:'',content:'',copyable:false}; }
+function newStep(){ return {label:'',content:'',copyable:false,image:null}; }
 
 async function loadTemplates(){
   const body=$('#pageBody');
@@ -459,6 +459,11 @@ function fieldCardHtml(si,fi,f){
       <label>下拉选项（逗号分隔）</label><input type="text" data-fk="${si}:${fi}" data-f="options" value="${esc(f.options||'')}" placeholder="华东,华北,华南"></div>
   </div>`;
 }
+function stepImgPrev(si,ki,s){
+  return s.image
+    ? `<div class="step-img-prev"><img src="${esc(s.image)}"><button type="button" class="step-img-del" data-delimg="${si}:${ki}">✕ 移除</button></div>`
+    : '';
+}
 function stepCardHtml(si,ki,s){
   return `<div class="field-card" data-step="${ki}" style="background:#FCFBF8">
     <div class="fc-head">
@@ -471,6 +476,10 @@ function stepCardHtml(si,ki,s){
       <div class="field fc-toggle" style="margin-bottom:0"><label style="margin:0;display:flex;align-items:center;gap:8px"><input type="checkbox" data-sk2="${si}:${ki}" data-s="copyable" ${s.copyable?'checked':''}> 支持一键复制</label></div>
     </div>
     <div class="field" style="margin:10px 0 0"><label>步骤内容（如地址 / 说明）</label><textarea data-sk2="${si}:${ki}" data-s="content" placeholder="如：USDT-TRC20 地址 Txxxx...">${esc(s.content||'')}</textarea></div>
+    <div class="field" style="margin:10px 0 0"><label>参考图片（可选，会员端展示供参考）</label>
+      <input type="file" accept="image/*" data-sk2="${si}:${ki}" data-s="imageFile" style="font-size:13px">
+      <div class="mt8" data-stepimg="${si}:${ki}">${stepImgPrev(si,ki,s)}</div>
+    </div>
   </div>`;
 }
 function renderStageEditor(body){
@@ -499,6 +508,27 @@ function renderStageEditor(body){
       A.newStages[si].steps[ki][k] = (k==='copyable')?inp.checked:inp.value;
     };
   });
+  // 步骤参考图片上传（后台专用 /upload/admin）
+  wrap.querySelectorAll('[data-sk2][data-s="imageFile"]').forEach(inp=>{
+    inp.onchange=async ()=>{
+      const [si,ki]=inp.dataset.sk2.split(':').map(Number);
+      const file=inp.files[0]; if(!file) return;
+      const prev=inp.closest('.field').querySelector('[data-stepimg]');
+      const oldHtml=prev.innerHTML;
+      prev.innerHTML='<div class="muted" style="font-size:12px">上传中…</div>';
+      try{
+        const fd=new FormData(); fd.append('file',file);
+        const res=await fetch('/upload/admin',{ method:'POST', headers:{'x-admin-key':getAK()}, body:fd });
+        const d=await res.json().catch(()=>({}));
+        if(!res.ok) throw new Error(d.message||('上传失败('+res.status+')'));
+        A.newStages[si].steps[ki].image=d.url;
+        prev.innerHTML=`<div class="step-img-prev"><img src="${esc(d.url)}"><button type="button" class="step-img-del" data-delimg="${si}:${ki}">✕ 移除</button></div>`;
+        const nb=prev.querySelector('[data-delimg]');
+        if(nb) nb.onclick=()=>{ A.newStages[si].steps[ki].image=null; prev.innerHTML=''; };
+        toast('图片已上传');
+      }catch(e){ prev.innerHTML=oldHtml; toast(e.message); }
+    };
+  });
   wrap.querySelectorAll('[data-delstage]').forEach(b=> b.onclick=()=>{ A.newStages.splice(+b.dataset.delstage,1); if(!A.newStages.length) A.newStages.push(newStage()); renderStageEditor(body); });
   wrap.querySelectorAll('[data-addfield]').forEach(b=> b.onclick=()=>{ const si=+b.dataset.addfield; A.newStages[si].fields.push(newField()); renderStageEditor(body); });
   wrap.querySelectorAll('[data-delfield]').forEach(b=> b.onclick=()=>{ const [si,fi]=b.dataset.delfield.split(':').map(Number); A.newStages[si].fields.splice(fi,1); if(!A.newStages[si].fields.length) A.newStages[si].fields.push(newField()); renderStageEditor(body); });
@@ -514,7 +544,7 @@ async function saveTemplate(){
       key:f.key.trim(), label:f.label.trim(), type:f.type, required:!!f.required,
       options: f.type==='dropdown' ? f.options.split(',').map(s=>s.trim()).filter(Boolean) : undefined
     })).filter(f=>f.key&&f.label),
-    steps: st.steps.map(s=>({ label:s.label.trim(), content:s.content||'', copyable:!!s.copyable })).filter(s=>s.label)
+    steps: st.steps.map(s=>({ label:s.label.trim(), content:s.content||'', copyable:!!s.copyable, image:s.image||null })).filter(s=>s.label)
   }));
   if(!stages.length){ toast('至少添加一个阶段'); return; }
   for(let si=0;si<stages.length;si++){
@@ -680,7 +710,7 @@ async function showDetail(id){
       if(f.type==='image'&&v) v=`<a href="${esc(v)}" target="_blank"><img class="thumb" src="${esc(v)}"></a>`;
       return `<div class="kv"><span class="k">${esc(f.label)}</span><span class="v">${v===''||v==null?'-':v}</span></div>`;
     }).join('');
-    const steps=(st.steps||[]).map(stp=>`<div class="step"><div class="label">${esc(stp.label)}</div>${stp.content?`<div class="content">${esc(stp.content)}</div>`:''}${stp.copyable?`<button class="copy-btn" data-copy="${esc(stp.content||'')}">📋 一键复制</button>`:''}</div>`).join('');
+    const steps=(st.steps||[]).map(stp=>`<div class="step"><div class="label">${esc(stp.label)}</div>${stp.content?`<div class="content">${esc(stp.content)}</div>`:''}${stp.image?`<div class="step-img"><img src="${esc(stp.image)}" alt="参考图"></div>`:''}${stp.copyable?`<button class="copy-btn" data-copy="${esc(stp.content||'')}">📋 一键复制</button>`:''}</div>`).join('');
     const isCur = !completed && idx===barIdx;
     return `<div class="card" style="margin-bottom:12px">
       <div class="title" style="font-size:15px">第 ${idx+1} 阶段 · ${esc(st.title)}${isCur?' <span class="tag pending">当前</span>':''}</div>

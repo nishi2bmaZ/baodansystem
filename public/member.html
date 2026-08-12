@@ -253,12 +253,13 @@ function renderFill(app){
     <div class="stage-bar">${bar}</div>
   </div>`;
 
-  // 参考操作步骤（含一键复制）
+  // 参考操作步骤（含图片与一键复制）
   const steps = stage.steps||[];
   if(steps.length){
     html += `<div class="steps-box"><div class="h">📌 参考操作步骤</div>` +
       steps.map(s=>`<div class="step"><div class="label">${esc(s.label)}</div>` +
         (s.content?`<div class="content">${esc(s.content)}</div>`:'') +
+        (s.image?`<div class="step-img"><img src="${esc(s.image)}" alt="参考图"></div>`:'') +
         (s.copyable?`<button class="copy-btn" data-copy="${esc(s.content||'')}">📋 一键复制</button>`:'') +
       `</div>`).join('') + `</div>`;
   }
