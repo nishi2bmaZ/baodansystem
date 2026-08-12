@@ -332,7 +332,15 @@ async function loadMine(){
   catch(e){ toast(e.message); }
 }
 function renderMine(app){
-  if(!S.mine.length){ app.innerHTML='<div class="card center muted">暂无提交记录</div>'; return; }
+  const header = `<div class="card switch-acct" id="switchAcct">
+      <span class="lbl">👤 当前账号</span>
+      <span class="act">切换账号 / 注册新会员 ›</span>
+    </div>`;
+  const bindSwitch = ()=>{ const el=$('#switchAcct'); if(el) el.onclick = switchAccount; };
+  if(!S.mine.length){
+    app.innerHTML = header + '<div class="card center muted">暂无提交记录</div>';
+    bindSwitch(); return;
+  }
   const items = S.mine.map(s=>{
     const total = s.stageCount||1;
     const cur = s.status==='COMPLETED'? total : ((s.stageIndex||0)+1);
@@ -346,8 +354,14 @@ function renderMine(app){
       </div>
     </div></div>`;
   }).join('');
-  app.innerHTML = items;
+  app.innerHTML = header + items;
+  bindSwitch();
   app.querySelectorAll('[data-id]').forEach(i=> i.onclick=()=>openMine(i.dataset.id));
+}
+function switchAccount(){
+  clearToken();
+  S = { view:'auth', mode:'login', instances:[], curInst:null, curSub:null, mine:[], formMode:'new', values:{} };
+  render();
 }
 function openMine(id){
   S.curSub = S.mine.find(m=>m.id==id);
