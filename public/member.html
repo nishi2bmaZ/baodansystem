@@ -274,7 +274,7 @@ function renderFill(app){
     else if(f.type==='dropdown') ctrl=`<select data-key="${f.key}"><option value="">请选择</option>${
         (f.options||[]).map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
     else if(f.type==='checkbox') ctrl=`<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-key="${f.key}" ${val?'checked':''}> 是</label>`;
-    else if(f.type==='image') ctrl=`<div><input type="file" accept="image/*" data-img="${f.key}" style="font-size:13px">
+    else if(f.type==='image') ctrl=`<div><input type="file" accept="image/*" data-key="${f.key}" data-img="${f.key}" style="font-size:13px">
       <div class="mt8" data-prev="${f.key}">${val?`<img class="img-prev" src="${esc(val)}">`:''}</div></div>`;
     html += `<div class="field"><label>${esc(f.label)}${f.required?'<span class="req">*</span>':''}</label>${ctrl}</div>`;
   });

@@ -48,7 +48,7 @@ body {
 }
 
 /* 内容容器 */
-.wrap { max-width: 480px; margin: 0 auto; padding: 16px; min-height: calc(100vh - 106px); }
+.wrap { max-width: 480px; margin: 0 auto; padding: 16px 16px 78px; min-height: calc(100vh - 50px); }
 .pad { padding: 16px; }
 
 /* 卡片 */
