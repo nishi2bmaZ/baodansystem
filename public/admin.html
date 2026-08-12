@@ -148,7 +148,7 @@ function autoResize(ta){
   ta.style.height = ta.scrollHeight + 'px';
 }
 function normalizeContent(s){
-  return String(s==null?'').replace(/\r\n/g,'\n').replace(/[ \t]+$/gm,'').replace(/^\n+|\n+$/g,'').replace(/\n{3,}/g,'\n\n');
+  return String(s==null?'':s).replace(/\r\n/g,'\n').replace(/[ \t]+$/gm,'').replace(/^\n+|\n+$/g,'').replace(/\n{3,}/g,'\n\n');
 }
 function bindAutoResize(root){
   root.querySelectorAll('textarea.auto-height').forEach(ta=>{

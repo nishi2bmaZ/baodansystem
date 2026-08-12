@@ -31,7 +31,7 @@ function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function normalizeContent(s){
-  return String(s==null?'').replace(/\r\n/g,'\n').replace(/[ \t]+$/gm,'').replace(/^\n+|\n+$/g,'').replace(/\n{3,}/g,'\n\n');
+  return String(s==null?'':s).replace(/\r\n/g,'\n').replace(/[ \t]+$/gm,'').replace(/^\n+|\n+$/g,'').replace(/\n{3,}/g,'\n\n');
 }
 function toast(msg){
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
