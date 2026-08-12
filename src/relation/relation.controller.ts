@@ -87,4 +87,11 @@ export class RelationController {
   myTeam(@Req() req: any) {
     return this.relation.getTeam(req.user.sub);
   }
+
+  /** 会员：团队中心（直推人数、团队总人数、直推成员掩码列表，需登录 Token） */
+  @UseGuards(JwtAuthGuard)
+  @Get('relation/me/center')
+  myCenter(@Req() req: any) {
+    return this.relation.getTeamCenter(req.user.sub);
+  }
 }

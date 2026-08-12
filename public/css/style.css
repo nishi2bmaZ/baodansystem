@@ -155,6 +155,7 @@ body {
 .tag.grabbed { background: var(--gold-light); color: var(--gold-strong); }
 .tag.submitted { background: #fff2dd; color: #D08A2E; }
 .tag.approved { background: var(--gold-light); color: var(--gold-strong); }
+.tag.completed { background: #E7F4E9; color: #2E8B57; }
 .tag.rejected { background: #FBE7E7; color: var(--danger); }
 .tag.pending { background: #F0EDE6; color: var(--ink-3); }
 
@@ -207,3 +208,49 @@ body {
 .kv:last-child { border-bottom: none; }
 .kv .k { color: var(--ink-3); }
 .kv .v { color: var(--ink-2); max-width: 65%; text-align: right; word-break: break-all; }
+
+/* ===== 团队中心 ===== */
+.team-stats { display: flex; gap: 12px; margin-bottom: 14px; }
+.team-stats .stat {
+  flex: 1; background: linear-gradient(135deg, #FBF4E2, #F3E6C5);
+  border: 1px solid var(--gold-border); border-radius: var(--radius-md);
+  padding: 16px 12px; text-align: center;
+}
+.team-stats .stat .num { font-size: 26px; font-weight: 700; color: var(--gold-strong); line-height: 1.2; }
+.team-stats .stat .lbl { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.member-list { background: var(--card); border-radius: var(--radius-lg); overflow: hidden;
+  border: 1px solid rgba(226, 210, 168, .35); }
+.member-list .m-item { display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.member-list .m-item:last-child { border-bottom: none; }
+.member-list .m-item .phone { font-weight: 600; color: var(--ink); letter-spacing: .5px; }
+.member-list .m-item .time { color: var(--ink-3); font-size: 12px; margin-top: 3px; }
+.member-list .empty { padding: 28px 16px; text-align: center; color: var(--ink-3); font-size: 13px; }
+
+/* ===== 多阶段：阶段进度条 ===== */
+.stage-bar { display: flex; align-items: center; gap: 6px; margin: 4px 0 12px; flex-wrap: wrap; }
+.stage-bar .dot { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); }
+.stage-bar .dot .n { width: 20px; height: 20px; border-radius: 50%; background: var(--gold-soft);
+  color: var(--gold-strong); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
+.stage-bar .dot.done .n { background: var(--gold); color: #fff; }
+.stage-bar .dot.cur .n { background: var(--gold-strong); color: #fff; box-shadow: 0 0 0 3px rgba(176,134,44,.18); }
+.stage-bar .arrow { color: var(--ink-3); font-size: 12px; }
+
+/* ===== 参考操作步骤 + 一键复制 ===== */
+.steps-box { background: var(--gold-light); border: 1px solid var(--gold-border); border-radius: var(--radius-md);
+  padding: 12px 14px; margin-bottom: 14px; }
+.steps-box .h { font-size: 13px; font-weight: 600; color: var(--gold-strong); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px; }
+.steps-box .step { padding: 8px 0; border-bottom: 1px dashed var(--gold-soft); }
+.steps-box .step:last-child { border-bottom: none; }
+.steps-box .step .label { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 3px; }
+.steps-box .step .content { font-size: 13px; color: var(--ink); white-space: pre-wrap; word-break: break-all;
+  background: #fff; border-radius: 8px; padding: 7px 10px; border: 1px solid var(--line); margin-bottom: 6px; }
+.steps-box .step .copy-btn { font-size: 12px; padding: 4px 12px; border-radius: 8px; border: 1px solid var(--gold-border);
+  background: #fff; color: var(--gold-strong); cursor: pointer; transition: background .15s ease; }
+.steps-box .step .copy-btn:active { background: var(--gold-soft); }
+.stage-title-tag { display: inline-block; font-size: 12px; font-weight: 600; color: var(--gold-strong);
+  background: var(--gold-light); border: 1px solid var(--gold-border); border-radius: 10px; padding: 2px 10px; margin-bottom: 8px; }
+.desc-box { background: var(--gold-light); border: 1px solid var(--gold-border); border-radius: var(--radius-md);
+  padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: var(--ink-2); line-height: 1.7; white-space: pre-wrap; }
+.desc-box .h { font-size: 13px; font-weight: 700; color: var(--gold-strong); margin-bottom: 4px; }

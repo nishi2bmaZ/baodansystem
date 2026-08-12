@@ -20,10 +20,10 @@ enum UserStatus {
 }
 
 enum SubmissionStatus {
-  GRABBED   // 已抢单未提交
-  SUBMITTED // 已提交待审核
-  APPROVED  // 通过
-  REJECTED  // 驳回
+  GRABBED   // 已抢单/本阶段填写中
+  SUBMITTED // 已提交当前阶段，待审核
+  COMPLETED // 全部阶段审核通过，任务完成
+  REJECTED  // 当前阶段被驳回
 }
 
 enum TaskStatus {
@@ -67,7 +67,8 @@ model InviteCode {
 model TaskTemplate {
   id          Int           @id @default(autoincrement())
   name        String
-  schemaJson  String        // 动态表单字段定义（JSON 文本）
+  description String?       // 总说明文字（任务总体说明）
+  stagesJson  String        // 多阶段定义（JSON 文本）：[{title, fields:[...], steps:[{label,content,copyable}]}]
   status      TaskStatus    @default(DRAFT)
   createdById Int
   createdAt   DateTime      @default(now())
@@ -95,8 +96,10 @@ model Submission {
   instance       TaskInstance     @relation(fields: [instanceId], references: [id])
   userId         Int
   user           User             @relation(fields: [userId], references: [id])
-  data           String           // 字段值 JSON
-  images         String?          // 图片 URL 数组 JSON
+  stageIndex     Int              @default(0) // 当前所处阶段（0 起）
+  stagesData     String?          // 各阶段填报数据 JSON：{"0":{data,images},"1":{...}}
+  data           String           // 最近一次提交阶段的字段值快照（便于导出/展示）
+  images         String?          // 最近一次提交阶段的图片 URL 数组 JSON
   status         SubmissionStatus @default(GRABBED)
   submitDeadline DateTime?        // 截止时间（取任务 endTime）
   submittedAt    DateTime?

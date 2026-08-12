@@ -215,6 +215,39 @@ export class RelationService {
     };
   }
 
+  /**
+   * 会员端「团队中心」数据：
+   * - 直推人数（directCount）
+   * - 团队总人数（teamTotal，含自己）
+   * - 直推成员列表（仅直接下级）：掩码手机号 + 注册时间
+   * 手机号在服务端做掩码，避免把完整号码下发到前端。
+   */
+  async getTeamCenter(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, path: true, referrerId: true },
+    });
+    if (!user) throw new NotFoundException('用户不存在');
+
+    const all = await this.prisma.user.findMany({ select: { id: true, referrerId: true } });
+    const stats = this.computeStats(all);
+
+    const directs = await this.prisma.user.findMany({
+      where: { referrerId: userId },
+      orderBy: { createdAt: 'asc' },
+      select: { phone: true, createdAt: true },
+    });
+
+    return {
+      directCount: stats.get(userId).directCount,
+      teamTotal: stats.get(userId).teamTotal,
+      directMembers: directs.map((d) => ({
+        phone: this.maskPhone(d.phone),
+        createdAt: d.createdAt,
+      })),
+    };
+  }
+
   /** 按邮箱/手机号搜索账号，返回关系信息，便于前端定位到对应节点。 */
   async searchUsers(q: string) {
     const kw = (q || '').trim();
@@ -346,5 +379,13 @@ export class RelationService {
     let max = 0;
     for (const n of nodes) max = Math.max(max, n.depth - rootDepth);
     return max;
+  }
+
+  /** 手机号掩码：保留前 3 后 4，中间用 **** 替代（如 138****5678） */
+  private maskPhone(p: string | null): string {
+    if (!p) return '';
+    const s = String(p);
+    if (s.length < 7) return '****';
+    return s.slice(0, 3) + '****' + s.slice(-4);
   }
 }

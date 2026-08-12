@@ -109,11 +109,11 @@
 /* ===================== 基础 ===================== */
 const AK_KEY = 'bd_admin_key';
 const USER_STATUS_CN = { PENDING:'待审核', ACTIVE:'已通过', DISABLED:'已禁用' };
-const SUB_STATUS_CN = { GRABBED:'已抢单', SUBMITTED:'待审核', APPROVED:'通过', REJECTED:'驳回' };
+const SUB_STATUS_CN = { GRABBED:'已抢单', SUBMITTED:'待审核', COMPLETED:'已完成', REJECTED:'驳回' };
 const TYPE_CN = { text:'文本', number:'数字', image:'图片', dropdown:'下拉', date:'日期', checkbox:'勾选' };
 const MENU_TITLE = { members:'会员管理', templates:'模板配置', publish:'任务发布', review:'提交审核', relation:'关系树' };
 let A = { view:'login', menu:'members', templates:[], instances:[], subs:[], curInstanceId:null,
-          newFields:[{key:'',label:'',type:'text',required:false,options:''}] };
+          newStages:[{ title:'', fields:[{key:'',label:'',type:'text',required:false,options:''}], steps:[{label:'',content:'',copyable:false}] }] };
 
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
@@ -132,6 +132,16 @@ async function api(method, path, body){
   let data=null; try{ data=await res.json(); }catch(e){}
   if(!res.ok){ throw new Error((data&&data.message)||('请求失败('+res.status+')')); }
   return data;
+}
+async function copyText(text){
+  const t = String(text||'');
+  try{
+    if (navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(t); toast('已复制到剪贴板'); return; }
+  }catch(e){}
+  const ta = document.createElement('textarea'); ta.value = t; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); toast('已复制到剪贴板'); }catch(e){ toast('复制失败，请手动复制'); }
+  document.body.removeChild(ta);
 }
 
 /* ===================== 启动 / 登录 ===================== */
@@ -358,22 +368,32 @@ async function saveReferrer(){
   }catch(e){ toast(e.message); }
 }
 
-/* ===================== 模板配置 ===================== */
+/* ===================== 模板配置（多阶段） ===================== */
+function newStage(){ return { title:'', fields:[{key:'',label:'',type:'text',required:false,options:''}], steps:[{label:'',content:'',copyable:false}] }; }
+function newField(){ return {key:'',label:'',type:'text',required:false,options:''}; }
+function newStep(){ return {label:'',content:'',copyable:false}; }
+
 async function loadTemplates(){
   const body=$('#pageBody');
   try{ A.templates = await api('GET','/admin/task-templates'); }catch(e){ toast(e.message); }
-  const list = (A.templates||[]).map(t=>`
-    <div class="card tpl-item">
+  const list = (A.templates||[]).map(t=>{
+    const stageHtml = (t.stages||[]).map((st,idx)=>
+      `<div class="chip">第${idx+1}阶段·${esc(st.title)}（${st.fields.length}字段）</div>`).join('');
+    return `<div class="card tpl-item">
       <div class="title" style="display:flex;align-items:center;gap:8px">${esc(t.name)} <span class="tag ${t.status==='PUBLISHED'?'approved':'pending'}">${t.status==='PUBLISHED'?'已发布':'草稿'}</span></div>
-      <div class="sub">${t.fields.length} 个字段</div>
-      <div class="tpl-chips">${t.fields.map(f=>`<span class="chip">${esc(f.label)}·${TYPE_CN[f.type]||f.type}</span>`).join('') || '<span class="muted">（无字段）</span>'}</div>
-    </div>`).join('');
+      ${t.description?`<div class="sub">说明：${esc(t.description)}</div>`:''}
+      <div class="sub">${t.stages.length} 个阶段</div>
+      <div class="tpl-chips">${stageHtml || '<span class="muted">（无阶段）</span>'}</div>
+    </div>`;
+  }).join('');
   body.innerHTML = `
     <div class="tpl-wrap">
       <div class="tpl-sec">
         <div class="tpl-sec-title"><span class="tpl-num">1</span>基本信息</div>
-        <p class="tpl-tip">模板用于定义一次任务需要收集哪些信息。保存后可在「任务发布」中选择使用。</p>
+        <p class="tpl-tip">多阶段模板：会员先抢名额，再逐阶段回填，每阶段由后台审核通过后方可进入下一阶段，全部通过后任务完成。</p>
         <div class="field"><label>模板名称<span class="req">*</span></label><input type="text" id="tplName" placeholder="如：每日外呼报单"></div>
+        <div class="field"><label>总说明文字（任务总体说明，会员端可见）</label>
+          <textarea id="tplDesc" placeholder="例如：本任务共两阶段，需依次完成充值与下单，充值地址见各阶段「参考操作步骤」，请务必复制正确地址。"></textarea></div>
         <div class="field"><label>状态</label>
           <select id="tplStatus"><option value="DRAFT">草稿</option><option value="PUBLISHED">发布</option></select>
           <div class="hint">草稿仅保存不对外；发布后会员端可选择该模板对应的任务。</div>
@@ -381,10 +401,10 @@ async function loadTemplates(){
       </div>
 
       <div class="tpl-sec">
-        <div class="tpl-sec-title"><span class="tpl-num">2</span>字段配置 <span class="tpl-count" id="feCount">${A.newFields.length} 个字段</span></div>
-        <p class="tpl-tip">点击下方「添加字段」逐条定义。支持 文本 / 数字 / 图片 / 下拉 / 日期 / 勾选 六类。下拉类型需填写选项。</p>
-        <div id="feList"></div>
-        <button class="btn ghost sm" id="addField" style="width:auto">+ 添加字段</button>
+        <div class="tpl-sec-title"><span class="tpl-num">2</span>阶段配置 <span class="tpl-count" id="stCount">${A.newStages.length} 个阶段</span></div>
+        <p class="tpl-tip">点击下方「添加阶段」逐阶段定义。每个阶段含：阶段标题、需收集的字段、参考操作步骤（如充值地址，可开启一键复制）。</p>
+        <div id="stageList"></div>
+        <button class="btn ghost sm" id="addStage" style="width:auto">+ 添加阶段</button>
       </div>
 
       <button class="btn mt16" id="saveTpl">保存模板</button>
@@ -394,63 +414,121 @@ async function loadTemplates(){
         ${list || '<div class="fc-empty">暂无模板，先在上方新建一个吧</div>'}
       </div>
     </div>`;
-  renderFieldEditor(body);
-  body.querySelector('#addField').onclick = ()=>{ A.newFields.push({key:'',label:'',type:'text',required:false,options:''}); renderFieldEditor(body); };
+  renderStageEditor(body);
+  body.querySelector('#addStage').onclick = ()=>{ A.newStages.push(newStage()); renderStageEditor(body); };
   body.querySelector('#saveTpl').onclick = saveTemplate;
 }
-function renderFieldEditor(body){
-  const wrap = body.querySelector('#feList');
-  const counter = body.querySelector('#feCount');
-  if(counter) counter.textContent = A.newFields.length + ' 个字段';
-  if(!A.newFields.length){
-    wrap.innerHTML = '<div class="fc-empty">还没有字段，点「+ 添加字段」开始</div>';
+function stageCardHtml(si){
+  const st = A.newStages[si];
+  const fields = st.fields.map((f,fi)=> fieldCardHtml(si,fi,f)).join('');
+  const steps = st.steps.map((s2,ki)=> stepCardHtml(si,ki,s2)).join('');
+  return `<div class="field-card" data-st="${si}" style="background:#fff">
+    <div class="fc-head">
+      <span class="fc-badge">${si+1}</span>
+      <span class="fc-type-pill">阶段</span>
+      <span class="fc-del" data-delstage="${si}">✕ 删除阶段</span>
+    </div>
+    <div class="field" style="margin:10px 0 0"><label>阶段标题<span class="req">*</span></label><input type="text" data-stagekey="${si}" value="${esc(st.title)}" placeholder="如：第一阶段-充值"></div>
+    <div class="field" style="margin:12px 0 0"><label>本阶段字段</label></div>
+    <div id="feList-${si}">${fields || '<div class="fc-empty">还没有字段</div>'}</div>
+    <button class="btn ghost sm" data-addfield="${si}" style="width:auto;margin-top:8px">+ 添加字段</button>
+    <div class="field" style="margin:14px 0 0"><label>参考操作步骤（如充值地址，可开启一键复制）</label></div>
+    <div id="stepList-${si}">${steps || '<div class="fc-empty">还没有步骤</div>'}</div>
+    <button class="btn ghost sm" data-addstep="${si}" style="width:auto;margin-top:8px">+ 添加步骤</button>
+  </div>`;
+}
+function fieldCardHtml(si,fi,f){
+  return `<div class="field-card" data-field="${fi}" style="background:#FCFBF8">
+    <div class="fc-head">
+      <span class="fc-badge">${fi+1}</span>
+      <span class="fc-type-pill" data-typepill>${TYPE_CN[f.type]||f.type}</span>
+      <span class="fc-del" data-delfield="${si}:${fi}">✕ 删除</span>
+    </div>
+    <div class="fc-grid">
+      <div class="field" style="margin-bottom:0"><label>字段标识 key<span class="req">*</span></label><input type="text" data-fk="${si}:${fi}" data-f="key" value="${esc(f.key)}" placeholder="英文,如 shop"></div>
+      <div class="field" style="margin-bottom:0"><label>显示名<span class="req">*</span></label><input type="text" data-fk="${si}:${fi}" data-f="label" value="${esc(f.label)}" placeholder="如：门店"></div>
+    </div>
+    <div class="fc-grid">
+      <div class="field" style="margin-bottom:0"><label>类型</label>
+        <select data-fk="${si}:${fi}" data-f="type">
+          ${['text','number','image','dropdown','date','checkbox'].map(t=>`<option value="${t}" ${f.type===t?'selected':''}>${TYPE_CN[t]}</option>`).join('')}
+        </select></div>
+      <div class="field fc-toggle" style="margin-bottom:0"><label style="margin:0;display:flex;align-items:center;gap:8px"><input type="checkbox" data-fk="${si}:${fi}" data-f="required" ${f.required?'checked':''}> 设为必填项</label></div>
+    </div>
+    <div class="field" data-optwrap style="margin-bottom:0;${f.type==='dropdown'?'':'display:none'}">
+      <label>下拉选项（逗号分隔）</label><input type="text" data-fk="${si}:${fi}" data-f="options" value="${esc(f.options||'')}" placeholder="华东,华北,华南"></div>
+  </div>`;
+}
+function stepCardHtml(si,ki,s){
+  return `<div class="field-card" data-step="${ki}" style="background:#FCFBF8">
+    <div class="fc-head">
+      <span class="fc-badge">${ki+1}</span>
+      <span class="fc-type-pill">步骤</span>
+      <span class="fc-del" data-delstep="${si}:${ki}">✕ 删除</span>
+    </div>
+    <div class="fc-grid">
+      <div class="field" style="margin-bottom:0"><label>步骤标题<span class="req">*</span></label><input type="text" data-sk2="${si}:${ki}" data-s="label" value="${esc(s.label)}" placeholder="如：充值地址"></div>
+      <div class="field fc-toggle" style="margin-bottom:0"><label style="margin:0;display:flex;align-items:center;gap:8px"><input type="checkbox" data-sk2="${si}:${ki}" data-s="copyable" ${s.copyable?'checked':''}> 支持一键复制</label></div>
+    </div>
+    <div class="field" style="margin:10px 0 0"><label>步骤内容（如地址 / 说明）</label><textarea data-sk2="${si}:${ki}" data-s="content" placeholder="如：USDT-TRC20 地址 Txxxx...">${esc(s.content||'')}</textarea></div>
+  </div>`;
+}
+function renderStageEditor(body){
+  const wrap = body.querySelector('#stageList');
+  const counter = body.querySelector('#stCount');
+  if(counter) counter.textContent = A.newStages.length + ' 个阶段';
+  if(!A.newStages.length){
+    wrap.innerHTML = '<div class="fc-empty">还没有阶段，点「+ 添加阶段」开始</div>';
     return;
   }
-  wrap.innerHTML = A.newFields.map((f,i)=>`
-    <div class="field-card" data-i="${i}">
-      <div class="fc-head">
-        <span class="fc-badge">${i+1}</span>
-        <span class="fc-type-pill" data-typepill>${TYPE_CN[f.type]||f.type}</span>
-        <span class="fc-del" data-del="${i}">✕ 删除</span>
-      </div>
-      <div class="fc-grid">
-        <div class="field" style="margin-bottom:0"><label>字段标识 key<span class="req">*</span></label><input type="text" data-k="key" value="${esc(f.key)}" placeholder="英文,如 shop"></div>
-        <div class="field" style="margin-bottom:0"><label>显示名<span class="req">*</span></label><input type="text" data-k="label" value="${esc(f.label)}" placeholder="如：门店"></div>
-      </div>
-      <div class="fc-grid">
-        <div class="field" style="margin-bottom:0"><label>类型</label>
-          <select data-k="type">
-            ${['text','number','image','dropdown','date','checkbox'].map(t=>`<option value="${t}" ${f.type===t?'selected':''}>${TYPE_CN[t]}</option>`).join('')}
-          </select></div>
-        <div class="field fc-toggle" style="margin-bottom:0"><label style="margin:0;display:flex;align-items:center;gap:8px"><input type="checkbox" data-k="required" ${f.required?'checked':''}> 设为必填项</label></div>
-      </div>
-      <div class="field" data-optwrap style="margin-bottom:0;${f.type==='dropdown'?'':'display:none'}">
-        <label>下拉选项（逗号分隔）</label><input type="text" data-k="options" value="${esc(f.options||'')}" placeholder="华东,华北,华南"></div>
-    </div>`).join('');
-  wrap.querySelectorAll('[data-k]').forEach(inp=>{
-    inp.onchange = ()=>{ const i=+inp.closest('[data-i]').dataset.i; const k=inp.dataset.k;
-      A.newFields[i][k] = (k==='required') ? inp.checked : inp.value;
-      if(k==='type'){ const opt=inp.closest('.field-card').querySelector('[data-optwrap]'); opt.style.display = inp.value==='dropdown'?'':'none'; const pill=inp.closest('.field-card').querySelector('[data-typepill]'); if(pill) pill.textContent = TYPE_CN[inp.value]||inp.value; }
+  wrap.innerHTML = A.newStages.map((s,si)=> stageCardHtml(si)).join('');
+  // 阶段标题
+  wrap.querySelectorAll('[data-stagekey]').forEach(inp=>{
+    inp.onchange=()=>{ const si=+inp.dataset.stagekey; A.newStages[si].title=inp.value; };
+  });
+  // 字段输入
+  wrap.querySelectorAll('[data-fk]').forEach(inp=>{
+    inp.onchange=()=>{ const [si,fi]=inp.dataset.fk.split(':').map(Number); const k=inp.dataset.f;
+      A.newStages[si].fields[fi][k] = (k==='required')?inp.checked:inp.value;
+      if(k==='type'){ const opt=inp.closest('.field-card').querySelector('[data-optwrap]'); opt.style.display=inp.value==='dropdown'?'':'none'; const pill=inp.closest('.field-card').querySelector('[data-typepill]'); if(pill) pill.textContent=TYPE_CN[inp.value]||inp.value; }
     };
   });
-  wrap.querySelectorAll('[data-del]').forEach(b=> b.onclick=()=>{ A.newFields.splice(+b.dataset.del,1); if(!A.newFields.length) A.newFields.push({key:'',label:'',type:'text',required:false,options:''}); renderFieldEditor(body); });
+  // 步骤输入
+  wrap.querySelectorAll('[data-sk2]').forEach(inp=>{
+    inp.onchange=()=>{ const [si,ki]=inp.dataset.sk2.split(':').map(Number); const k=inp.dataset.s;
+      A.newStages[si].steps[ki][k] = (k==='copyable')?inp.checked:inp.value;
+    };
+  });
+  wrap.querySelectorAll('[data-delstage]').forEach(b=> b.onclick=()=>{ A.newStages.splice(+b.dataset.delstage,1); if(!A.newStages.length) A.newStages.push(newStage()); renderStageEditor(body); });
+  wrap.querySelectorAll('[data-addfield]').forEach(b=> b.onclick=()=>{ const si=+b.dataset.addfield; A.newStages[si].fields.push(newField()); renderStageEditor(body); });
+  wrap.querySelectorAll('[data-delfield]').forEach(b=> b.onclick=()=>{ const [si,fi]=b.dataset.delfield.split(':').map(Number); A.newStages[si].fields.splice(fi,1); if(!A.newStages[si].fields.length) A.newStages[si].fields.push(newField()); renderStageEditor(body); });
+  wrap.querySelectorAll('[data-addstep]').forEach(b=> b.onclick=()=>{ const si=+b.dataset.addstep; A.newStages[si].steps.push(newStep()); renderStageEditor(body); });
+  wrap.querySelectorAll('[data-delstep]').forEach(b=> b.onclick=()=>{ const [si,ki]=b.dataset.delstep.split(':').map(Number); A.newStages[si].steps.splice(ki,1); if(!A.newStages[si].steps.length) A.newStages[si].steps.push(newStep()); renderStageEditor(body); });
 }
 async function saveTemplate(){
-  const name=$('#tplName').value.trim(), status=$('#tplStatus').value;
+  const name=$('#tplName').value.trim(), status=$('#tplStatus').value, description=$('#tplDesc').value.trim();
   if(!name){ toast('请填写模板名称'); return; }
-  const fields=A.newFields.map(f=>({
-    key:f.key.trim(), label:f.label.trim(), type:f.type, required:!!f.required,
-    options: f.type==='dropdown' ? f.options.split(',').map(s=>s.trim()).filter(Boolean) : undefined
-  })).filter(f=>f.key && f.label);
-  if(!fields.length){ toast('至少添加一个有效字段（key和显示名必填）'); return; }
-  for(const f of fields){
-    if(!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(f.key)){ toast('字段key非法：'+f.key); return; }
-    if(f.type==='dropdown' && (!f.options||!f.options.length)){ toast('下拉字段「'+f.label+'」需提供选项'); return; }
+  const stages=A.newStages.map(st=>({
+    title: st.title.trim(),
+    fields: st.fields.map(f=>({
+      key:f.key.trim(), label:f.label.trim(), type:f.type, required:!!f.required,
+      options: f.type==='dropdown' ? f.options.split(',').map(s=>s.trim()).filter(Boolean) : undefined
+    })).filter(f=>f.key&&f.label),
+    steps: st.steps.map(s=>({ label:s.label.trim(), content:s.content||'', copyable:!!s.copyable })).filter(s=>s.label)
+  }));
+  if(!stages.length){ toast('至少添加一个阶段'); return; }
+  for(let si=0;si<stages.length;si++){
+    if(!stages[si].title){ toast('第'+(si+1)+'阶段标题必填'); return; }
+    if(!stages[si].fields.length){ toast('第'+(si+1)+'阶段至少需要一个字段'); return; }
+    for(const f of stages[si].fields){
+      if(!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(f.key)){ toast('第'+(si+1)+'阶段字段key非法：'+f.key); return; }
+      if(f.type==='dropdown' && (!f.options||!f.options.length)){ toast('下拉字段「'+f.label+'」需提供选项'); return; }
+    }
   }
   try{
-    await api('POST','/admin/task-template',{name,status,fields});
+    await api('POST','/admin/task-template',{name,status,description,stages});
     toast('模板已保存');
-    A.newFields=[{key:'',label:'',type:'text',required:false,options:''}];
+    A.newStages=[newStage()];
     loadTemplates();
   }catch(e){ toast(e.message); }
 }
@@ -565,15 +643,18 @@ function renderReview(body){
 function revRowHtml(s){
   const sel = A.selIds && A.selIds.has(s.id);
   const stcn = SUB_STATUS_CN[s.status]||s.status;
-  const stcls = s.status==='APPROVED'?'approved':s.status==='REJECTED'?'rejected':'pending';
+  const stcls = s.status==='COMPLETED'?'completed':s.status==='REJECTED'?'rejected':'pending';
   const time = s.submittedAt ? s.submittedAt.replace('T',' ').slice(0,16) : '—';
   const member = s.user? s.user.email : '—';
   const title = s.instance? s.instance.title : '—';
+  const total = s.stageCount||1;
+  const cur = s.status==='COMPLETED'? total : ((s.stageIndex||0)+1);
+  const stageTxt = s.status==='COMPLETED'? '全部完成' : ('第 '+cur+'/'+total+' 阶段');
   return `<div class="rev-row ${sel?'sel':''}" data-id="${s.id}">
     <input type="checkbox" class="rev-check" ${sel?'checked':''}>
     <div class="rev-main">
       <div class="rev-top"><span class="rev-id">#${s.id}</span><span class="tag ${stcls}">${stcn}</span></div>
-      <div class="rev-meta">${esc(title)} ｜ ${esc(member)} ｜ ${esc(time)}</div>
+      <div class="rev-meta">${esc(title)} ｜ ${esc(member)} ｜ ${stageTxt} ｜ ${esc(time)}</div>
     </div>
   </div>`;
 }
@@ -583,14 +664,32 @@ function updateCount(){
 async function showDetail(id){
   const s=(A.subs||[]).find(x=>x.id===id); const body=$('#pageBody');
   if(!s){ toast('记录不存在'); return; }
-  const fields=(s.instance&&s.instance.template&&s.instance.template.fields)||[];
-  const rows=fields.map(f=>{
-    let v=s.data? s.data[f.key]:'';
-    if(f.type==='checkbox') v=v?'是':'否';
-    if(f.type==='image'&&v) v=`<a href="${esc(v)}" target="_blank"><img class="thumb" src="${esc(v)}"></a>`;
-    return `<div class="kv"><span class="k">${esc(f.label)}</span><span class="v">${v===''||v==null?'-':v}</span></div>`;
+  const stages=(s.instance&&s.instance.template&&s.instance.template.stages)||[];
+  const count=stages.length||1;
+  const completed = s.status==='COMPLETED';
+  const barIdx = completed ? count : (s.stageIndex||0);
+  let bar='';
+  for(let k=0;k<count;k++){ const cls=completed?'done':(k<barIdx?'done':(k===barIdx?'cur':'')); bar+=`<span class="dot ${cls}"><span class="n">${k+1}</span></span>`; if(k<count-1) bar+=`<span class="arrow">›</span>`; }
+
+  const sd = s.stagesData||{};
+  const stageBlocks = stages.map((st,idx)=>{
+    const d=sd[idx]||{}; const data=d.data||{}; const imgs=d.images||[];
+    const rows=(st.fields||[]).map(f=>{
+      let v=data[f.key];
+      if(f.type==='checkbox') v=v?'是':'否';
+      if(f.type==='image'&&v) v=`<a href="${esc(v)}" target="_blank"><img class="thumb" src="${esc(v)}"></a>`;
+      return `<div class="kv"><span class="k">${esc(f.label)}</span><span class="v">${v===''||v==null?'-':v}</span></div>`;
+    }).join('');
+    const steps=(st.steps||[]).map(stp=>`<div class="step"><div class="label">${esc(stp.label)}</div>${stp.content?`<div class="content">${esc(stp.content)}</div>`:''}${stp.copyable?`<button class="copy-btn" data-copy="${esc(stp.content||'')}">📋 一键复制</button>`:''}</div>`).join('');
+    const isCur = !completed && idx===barIdx;
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="title" style="font-size:15px">第 ${idx+1} 阶段 · ${esc(st.title)}${isCur?' <span class="tag pending">当前</span>':''}</div>
+      ${rows||'<div class="muted">（未填写）</div>'}
+      ${(imgs.length)?`<div class="mt8">${imgs.map(u=>`<a href="${esc(u)}" target="_blank"><img class="thumb" src="${esc(u)}" style="margin-right:6px"></a>`).join('')}</div>`:''}
+      ${steps?`<div class="steps-box" style="margin-top:10px"><div class="h">📌 参考步骤</div>${steps}</div>`:''}
+    </div>`;
   }).join('');
-  const imgMore=(s.images&&s.images.length)?`<div class="img-grid mt8">${s.images.map(u=>`<a href="${esc(u)}" target="_blank"><img src="${esc(u)}"></a>`).join('')}</div>`:'';
+
   const info=[
     ['任务标题', s.instance? s.instance.title : '—'],
     ['模板名称', (s.instance&&s.instance.template)? s.instance.template.name : '—'],
@@ -603,25 +702,26 @@ async function showDetail(id){
     ? `<div class="kv"><span class="k">驳回理由</span><span class="v" style="color:var(--danger)">${esc(s.rejectReason)}</span></div>` : '';
   const actions = s.status==='SUBMITTED'
     ? `<div style="display:flex;gap:10px;margin-top:14px">
-         <button class="btn sm" data-approve="${s.id}">通过</button>
-         <button class="btn sm danger" data-reject="${s.id}">驳回</button>
+         <button class="btn sm" data-approve="${s.id}">${completed?'通过并完成':'通过本阶段'}</button>
+         <button class="btn sm danger" data-reject="${s.id}">驳回本阶段</button>
        </div>`
-    : `<div class="sub mt8">${s.status==='REJECTED'?'已驳回':'已通过'}</div>`;
+    : `<div class="sub mt8">${s.status==='REJECTED'?'已驳回（会员可重填）':(s.status==='GRABBED'?'待会员填写':'已全部完成')}</div>`;
   body.innerHTML = `
     <div class="tpl-wrap">
       <div class="tpl-sec rev-detail">
         <div class="tpl-sec-title">
           <a href="javascript:;" id="rBack" style="color:var(--gold);text-decoration:none;margin-right:8px">← 返回列表</a>
-          #${s.id} <span class="tag ${s.status==='APPROVED'?'approved':s.status==='REJECTED'?'rejected':'pending'}">${SUB_STATUS_CN[s.status]||s.status}</span>
+          #${s.id} <span class="tag ${s.status==='COMPLETED'?'completed':s.status==='REJECTED'?'rejected':'pending'}">${SUB_STATUS_CN[s.status]||s.status}</span>
         </div>
         <div class="field-rows mt8">${infoHtml}${reason}</div>
-        <p class="tpl-tip" style="margin:14px 0 8px">提交内容</p>
-        <div class="field-rows">${rows||'<div class="muted">（无字段）</div>'}</div>
-        ${imgMore}
+        <p class="tpl-tip" style="margin:14px 0 8px">阶段进度</p>
+        <div class="stage-bar">${bar}</div>
+        ${stageBlocks}
         ${actions}
       </div>
     </div>`;
   $('#rBack').onclick=()=> loadReview();
+  body.querySelectorAll('[data-copy]').forEach(b=> b.onclick=()=>copyText(b.dataset.copy));
   const ab=body.querySelector('[data-approve]'); if(ab) ab.onclick=()=>review(ab.dataset.approve,'approve');
   const rj=body.querySelector('[data-reject]'); if(rj) rj.onclick=()=>{
     const note=prompt('请输入驳回理由：','不符合要求'); if(note===null) return; review(rj.dataset.reject,'reject',note);

@@ -29,12 +29,43 @@ export class FieldDefDto {
   placeholder?: string;
 }
 
+/** 单个参考操作步骤（如充值地址），copyable=true 时会员端提供一键复制 */
+export class StepDto {
+  @IsString()
+  label: string;
+
+  @IsOptional()
+  @IsString()
+  content?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  copyable?: boolean;
+}
+
+/** 任务的一个阶段：含标题、填报字段、参考步骤 */
+export class StageDto {
+  @IsString()
+  title: string;
+
+  @IsArray()
+  fields: FieldDefDto[];
+
+  @IsOptional()
+  @IsArray()
+  steps?: StepDto[];
+}
+
 export class CreateTemplateDto {
   @IsString()
   name: string;
 
+  @IsOptional()
+  @IsString()
+  description?: string;
+
   @IsArray()
-  fields: FieldDefDto[];
+  stages: StageDto[];
 
   @IsOptional()
   @IsIn(['DRAFT', 'PUBLISHED'])
