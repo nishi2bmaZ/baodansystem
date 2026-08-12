@@ -719,12 +719,22 @@ async function showDetail(id){
   const sd = s.stagesData||{};
   const stageBlocks = stages.map((st,idx)=>{
     const d=sd[idx]||{}; const data=d.data||{};
-    const rows=(st.fields||[]).map(f=>{
+    const shownKeys = new Set();
+    const fieldRows = (st.fields||[]).map(f=>{
+      shownKeys.add(f.key);
       let v=data[f.key];
       if(f.type==='checkbox') v=v?'是':'否';
       if(f.type==='image'&&v) v=`<a href="${esc(v)}" target="_blank"><img class="thumb" src="${esc(v)}"></a>`;
       return `<div class="kv"><span class="k">${esc(f.label)}</span><span class="v">${v===''||v==null?'-':v}</span></div>`;
     }).join('');
+    // 兜底：把提交数据里、模板当前没有的字段也列出来，确保会员填的内容不丢失
+    const extraKeys = Object.keys(data).filter(k=>!shownKeys.has(k));
+    const extraRows = extraKeys.map(k=>{
+      let v=data[k];
+      if(typeof v==='string' && /^(https?:\/\/|\/uploads)/.test(v)) v=`<a href="${esc(v)}" target="_blank"><img class="thumb" src="${esc(v)}"></a>`;
+      return `<div class="kv"><span class="k">${esc(k)}<span class="muted" style="font-size:11px">（模板外字段）</span></span><span class="v">${v===''||v==null?'-':v}</span></div>`;
+    }).join('');
+    const rows = fieldRows + extraRows;
     const steps=(st.steps||[]).map(stp=>{
       const clean=normalizeContent(stp.content);
       return `<div class="step"><div class="label">${esc(stp.label)}</div>${clean?`<div class="content">${esc(clean)}</div>`:''}${stp.image?`<div class="step-img"><img src="${esc(stp.image)}" alt="参考图"></div>`:''}${stp.copyable?`<button class="copy-btn" data-copy="${esc(clean)}">📋 一键复制</button>`:''}</div>`;
