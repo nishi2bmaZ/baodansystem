@@ -386,7 +386,7 @@ function renderMineDetail(app){
 
   const sd = s.stagesData || {};
   const stageBlocks = stages.map((st,idx)=>{
-    const d = sd[idx]||{}; const data = d.data||{}; const imgs = d.images||[];
+    const d = sd[idx]||{}; const data = d.data||{};
     const rows = (st.fields||[]).map(f=>{
       let v = data[f.key];
       if(f.type==='checkbox') v = v? '是':'否';
@@ -395,7 +395,6 @@ function renderMineDetail(app){
     }).join('');
     return `<div class="card"><div class="title" style="font-size:15px">第 ${idx+1} 阶段 · ${esc(st.title)}</div>
       ${rows||'<div class="muted">（未填写）</div>'}
-      ${(imgs.length)?`<div class="mt8">${imgs.map(u=>`<a href="${esc(u)}" target="_blank"><img class="thumb" src="${esc(u)}" style="margin-right:6px"></a>`).join('')}</div>`:''}
     </div>`;
   }).join('');
 

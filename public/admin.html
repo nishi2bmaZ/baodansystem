@@ -143,6 +143,16 @@ async function copyText(text){
   try{ document.execCommand('copy'); toast('已复制到剪贴板'); }catch(e){ toast('复制失败，请手动复制'); }
   document.body.removeChild(ta);
 }
+function autoResize(ta){
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+function bindAutoResize(root){
+  root.querySelectorAll('textarea.auto-height').forEach(ta=>{
+    ta.addEventListener('input', ()=>autoResize(ta));
+    autoResize(ta);
+  });
+}
 
 /* ===================== 启动 / 登录 ===================== */
 function render(){
@@ -393,7 +403,7 @@ async function loadTemplates(){
         <p class="tpl-tip">多阶段模板：会员先抢名额，再逐阶段回填，每阶段由后台审核通过后方可进入下一阶段，全部通过后任务完成。</p>
         <div class="field"><label>模板名称<span class="req">*</span></label><input type="text" id="tplName" placeholder="如：每日外呼报单"></div>
         <div class="field"><label>总说明文字（任务总体说明，会员端可见）</label>
-          <textarea id="tplDesc" placeholder="例如：本任务共两阶段，需依次完成充值与下单，充值地址见各阶段「参考操作步骤」，请务必复制正确地址。"></textarea></div>
+          <textarea class="auto-height" id="tplDesc" placeholder="例如：本任务共两阶段，需依次完成充值与下单，充值地址见各阶段「参考操作步骤」，请务必复制正确地址。"></textarea></div>
         <div class="field"><label>状态</label>
           <select id="tplStatus"><option value="DRAFT">草稿</option><option value="PUBLISHED">发布</option></select>
           <div class="hint">草稿仅保存不对外；发布后会员端可选择该模板对应的任务。</div>
@@ -417,6 +427,7 @@ async function loadTemplates(){
   renderStageEditor(body);
   body.querySelector('#addStage').onclick = ()=>{ A.newStages.push(newStage()); renderStageEditor(body); };
   body.querySelector('#saveTpl').onclick = saveTemplate;
+  const descTa = body.querySelector('#tplDesc'); if(descTa){ descTa.classList.add('auto-height'); bindAutoResize(body); }
 }
 function stageCardHtml(si){
   const st = A.newStages[si];
@@ -475,7 +486,7 @@ function stepCardHtml(si,ki,s){
       <div class="field" style="margin-bottom:0"><label>步骤标题<span class="req">*</span></label><input type="text" data-sk2="${si}:${ki}" data-s="label" value="${esc(s.label)}" placeholder="如：充值地址"></div>
       <div class="field fc-toggle" style="margin-bottom:0"><label style="margin:0;display:flex;align-items:center;gap:8px"><input type="checkbox" data-sk2="${si}:${ki}" data-s="copyable" ${s.copyable?'checked':''}> 支持一键复制</label></div>
     </div>
-    <div class="field" style="margin:10px 0 0"><label>步骤内容（如地址 / 说明）</label><textarea data-sk2="${si}:${ki}" data-s="content" placeholder="如：USDT-TRC20 地址 Txxxx...">${esc(s.content||'')}</textarea></div>
+    <div class="field" style="margin:10px 0 0"><label>步骤内容（如地址 / 说明）</label><textarea class="auto-height" data-sk2="${si}:${ki}" data-s="content" placeholder="如：USDT-TRC20 地址 Txxxx...">${esc(s.content||'')}</textarea></div>
     <div class="field" style="margin:10px 0 0"><label>参考图片（可选，会员端展示供参考）</label>
       <input type="file" accept="image/*" data-sk2="${si}:${ki}" data-s="imageFile" style="font-size:13px">
       <div class="mt8" data-stepimg="${si}:${ki}">${stepImgPrev(si,ki,s)}</div>
@@ -534,6 +545,7 @@ function renderStageEditor(body){
   wrap.querySelectorAll('[data-delfield]').forEach(b=> b.onclick=()=>{ const [si,fi]=b.dataset.delfield.split(':').map(Number); A.newStages[si].fields.splice(fi,1); if(!A.newStages[si].fields.length) A.newStages[si].fields.push(newField()); renderStageEditor(body); });
   wrap.querySelectorAll('[data-addstep]').forEach(b=> b.onclick=()=>{ const si=+b.dataset.addstep; A.newStages[si].steps.push(newStep()); renderStageEditor(body); });
   wrap.querySelectorAll('[data-delstep]').forEach(b=> b.onclick=()=>{ const [si,ki]=b.dataset.delstep.split(':').map(Number); A.newStages[si].steps.splice(ki,1); if(!A.newStages[si].steps.length) A.newStages[si].steps.push(newStep()); renderStageEditor(body); });
+  bindAutoResize(wrap);
 }
 async function saveTemplate(){
   const name=$('#tplName').value.trim(), status=$('#tplStatus').value, description=$('#tplDesc').value.trim();
@@ -703,7 +715,7 @@ async function showDetail(id){
 
   const sd = s.stagesData||{};
   const stageBlocks = stages.map((st,idx)=>{
-    const d=sd[idx]||{}; const data=d.data||{}; const imgs=d.images||[];
+    const d=sd[idx]||{}; const data=d.data||{};
     const rows=(st.fields||[]).map(f=>{
       let v=data[f.key];
       if(f.type==='checkbox') v=v?'是':'否';
@@ -715,7 +727,6 @@ async function showDetail(id){
     return `<div class="card" style="margin-bottom:12px">
       <div class="title" style="font-size:15px">第 ${idx+1} 阶段 · ${esc(st.title)}${isCur?' <span class="tag pending">当前</span>':''}</div>
       ${rows||'<div class="muted">（未填写）</div>'}
-      ${(imgs.length)?`<div class="mt8">${imgs.map(u=>`<a href="${esc(u)}" target="_blank"><img class="thumb" src="${esc(u)}" style="margin-right:6px"></a>`).join('')}</div>`:''}
       ${steps?`<div class="steps-box" style="margin-top:10px"><div class="h">📌 参考步骤</div>${steps}</div>`:''}
     </div>`;
   }).join('');

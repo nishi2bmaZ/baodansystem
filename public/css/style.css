@@ -122,6 +122,7 @@ body {
   background: var(--bg-2); color: var(--ink-3); cursor: not-allowed; opacity: .7;
 }
 .field textarea { resize: vertical; min-height: 76px; }
+.field textarea.auto-height { resize: none; min-height: 38px; overflow: hidden; }
 .field .hint { color: var(--ink-3); font-size: 12px; margin-top: 5px; }
 
 /* 独立下拉框（工具条/筛选器）：与主题按钮风格统一 */
